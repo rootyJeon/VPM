@@ -1,0 +1,74 @@
+# VPM: assets, data and run outputs (anchored to the repo root so that
+# cosmos_framework/data/ and cosmos_framework/checkpoint/ stay tracked).
+/checkpoints/
+/data/
+/outputs/
+/release/
+/logs/
+/wandb/
+/slurm_signal/
+/examples/checkpoints/
+/examples/data/
+/assets
+/credentials
+/datasets
+/tmp
+/viz_tmp/
+wandb/
+slurm_signal/
+core_*
+core.[0-9]*
+*.sqsh
+*.out
+*.err
+*.log
+.cuda-name
+*.env
+
+# Editor / OS noise
+*.swp
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+/build/
+/dist/
+/sdist/
+/wheels/
+*.egg-info/
+.eggs/
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Tests / tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.cache
+.ipynb_checkpoints
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Packaging
+.pypirc

@@ -1,0 +1,4 @@
+# Long rollouts: frames 17..144 scored. Clips shorter than 145 frames are skipped (and listed as skipped).
+name: long-horizon
+ref_frame: 16
+horizon: 128

@@ -1,0 +1,5 @@
+# Camera-controlled generation: the exported inputs also contain the cameras of every window frame, and the prompt
+# appends a camera-motion sentence per view. The metrics are unchanged.
+name: camera-control
+text: caption+camera
+camera_conditioning: true

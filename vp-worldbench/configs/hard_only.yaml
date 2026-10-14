@@ -1,0 +1,4 @@
+# vpm-v1 restricted to the clips tagged difficulty = hard (moving cameras / out-of-view relays in Simul-*).
+name: vpm-v1-hard
+clip_filter:
+  difficulty: hard

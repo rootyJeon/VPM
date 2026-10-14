@@ -1,0 +1,14 @@
+# For square-output generators: score every subset on a 480x480 centre crop instead of stretching.
+# `vpmwb generation export --protocol configs/square_center_crop.yaml --size 480x480` exports context frames with the
+# same centre crop; the delta queries and GT visibility are restricted to the cropped grid of each view.
+name: square-center-crop
+eval_size:
+  Simul-Robot: [480, 480]
+  Simul-General: [480, 480]
+  Real-Robot: [480, 480]
+  Real-General: [480, 480]
+resize_mode:
+  Simul-Robot: center_crop
+  Simul-General: center_crop
+  Real-Robot: center_crop
+  Real-General: center_crop

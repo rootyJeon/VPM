@@ -1,0 +1,6 @@
+# Source distribution: the docs and protocol configs the README refers to, and the test suite.
+include README.md
+graft docs
+graft configs
+recursive-include tests *.py
+global-exclude __pycache__ *.py[cod] .DS_Store

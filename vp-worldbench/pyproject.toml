@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vpm-worldbench"
+version = "1.0.0"
+description = "VP-WorldBench: a multi-view 4D benchmark for video world models (generation, 3D/2D tracking, depth, 4D reconstruction, segmentation, video understanding)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"      # SPDX; a LICENSE / NOTICE file at the root is packaged automatically (license-files default)
+authors = [{ name = "VP-WorldBench authors" }]
+keywords = ["benchmark", "world model", "video generation", "multi-view", "4D", "3D point tracking", "point tracking",
+            "depth estimation", "4D reconstruction", "novel view synthesis", "video segmentation",
+            "video understanding"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Image Processing",
+  "Topic :: Multimedia :: Video",
+]
+dependencies = [
+  "numpy>=1.23",
+  "av>=11",
+  "opencv-python-headless>=4.8",
+  "scipy>=1.9",
+  "pyyaml>=6",
+  "tqdm",
+]
+
+[project.optional-dependencies]
+metrics = ["torch>=2.1", "scikit-image>=0.21", "lpips>=0.1.4"]
+fvd = ["torch>=2.1", "cd-fvd>=0.1.1"]
+met3r = ["torch>=2.1"]          # plus the official MEt3R stack: pinned recipe in the vpm_worldbench/metrics/met3r.py docstring
+track = ["torch>=2.1"]          # plus MVTracker (torch.hub) and MoGe-2: pinned recipe in the vpm_worldbench/lifters/mvtracker.py docstring
+dev = ["pytest>=7", "scikit-image>=0.21"]
+all = ["torch>=2.1", "scikit-image>=0.21", "lpips>=0.1.4", "cd-fvd>=0.1.1", "pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/vpm-project/VPM/tree/main/vp-worldbench"
+Documentation = "https://github.com/vpm-project/VPM/tree/main/vp-worldbench/docs"
+Repository = "https://github.com/vpm-project/VPM/tree/main/vp-worldbench"
+Issues = "https://github.com/vpm-project/VPM/issues"
+
+[project.scripts]
+vpmwb = "vpm_worldbench.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["vpm_worldbench*"]

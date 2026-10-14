@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: OpenMDW-1.1
+
+import inspect
+import pydoc
+from typing import Any
+
+"""
+``Registry`` and `locate` provide ways to map a string (typically found
+in config files) to callable objects.
+"""
+
+__all__ = ["locate", "convert_target_to_string"]
+
+try:
+    from fvcore.common.registry import Registry
+
+    __all__ += ["Registry"]
+except Exception:
+    pass
+
+
+def convert_target_to_string(t: Any) -> str:
+    """
+    Inverse of ``locate()``.
+
+    Args:
+        t: any object with ``__module__`` and ``__qualname__``
+    """
+    if hasattr(t, "__self__") and inspect.isclass(t.__self__):
+        cls = t.__self__
+        module = cls.__module__
+        qualname = f"{cls.__name__}.{t.__name__}"
+    else:
+        module = t.__module__
+        qualname = t.__qualname__
+
+    module_parts = module.split(".")
+    for k in range(1, len(module_parts)):
+        prefix = ".".join(module_parts[:k])
+        candidate = f"{prefix}.{qualname}"
+        try:
+            if locate(candidate) is t:
+                return candidate
+        except ImportError:
+            pass
+    return f"{module}.{qualname}"
+
+
+_convert_target_to_string = convert_target_to_string
+
+
+def locate(name: str) -> Any:
+    """
+    Locate and return an object ``x`` using an input string ``{x.__module__}.{x.__qualname__}``,
+    such as "module.submodule.class_name".
+
+    Raise Exception if it cannot be found.
+    """
+    obj = pydoc.locate(name)
+
+    if obj is None:
+        try:
+
+            from hydra.utils import _locate
+        except ImportError as e:
+            raise ImportError(f"Cannot dynamically locate object {name}!") from e
+        else:
+            obj = _locate(name)
+
+    return obj

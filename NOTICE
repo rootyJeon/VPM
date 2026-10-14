@@ -1,0 +1,102 @@
+VPM
+
+Copyright (c) 2026 Byungwoo Jeon <imbw2024@kaist.ac.kr>. VPM is released under
+CC BY-NC 4.0 (see LICENSE): attribution required, non-commercial use only. For
+commercial licensing contact imbw2024@kaist.ac.kr.
+
+VPM is a derivative of NVIDIA Cosmos (cosmos-framework and the Cosmos3-Nano base
+model), which NVIDIA distributes under the OpenMDW License Agreement 1.1. As that
+agreement requires, a copy is included as LICENSE-OpenMDW-1.1.txt and NVIDIA's
+copyright notices are retained, including the SPDX headers of the files derived
+from cosmos-framework. Its terms apply to the Cosmos-derived portions; the
+CC BY-NC 4.0 terms apply to VPM as released.
+
+Cosmos
+
+Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
+
+This file contains attribution notices for third-party source code that is
+adapted, copied, or vendored in this repository. Third-party Python packages
+that are installed as dependencies (see pyproject.toml and uv.lock) are not
+vendored here and remain under their own licenses.
+
+HuggingFace Transformers / Qwen
+Source: https://github.com/huggingface/transformers
+License: Apache-2.0
+Notices:
+  Copyright 2024 The Qwen team, Alibaba Group and the HuggingFace Inc. team.
+  Copyright 2025 The Qwen team, Alibaba Group and the HuggingFace Inc. team.
+  Copyright 2025 The Qwen Team and The HuggingFace Inc. team.
+  Copyright 2025 HuggingFace Inc. team.
+Files:
+  cosmos_framework/model/vfm/vlm/qwen3_vl/configuration_qwen3_vl.py
+  cosmos_framework/model/vfm/vlm/qwen3_vl/qwen3_vl.py
+  cosmos_framework/model/vfm/vlm/qwen3_vl/utils.py
+
+ByteDance-Seed Bagel / Qwen2 tokenizer
+Source: https://github.com/ByteDance-Seed/Bagel
+License: Apache-2.0
+Notice:
+  Copyright 2024 The Qwen Team and The HuggingFace Inc. team.
+File:
+  cosmos_framework/model/vfm/tokenizers/tokenization_qwen2.py
+
+HuggingFace Diffusers UniPC scheduler
+Source: https://github.com/huggingface/diffusers
+License: Apache-2.0
+Notices:
+  Copyright 2024 TSAIL Team and The HuggingFace Team. All rights reserved.
+  Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
+File:
+  cosmos_framework/model/vfm/diffusion/samplers/fm_solvers_unipc.py
+
+Wan2.2 VAE
+Source: https://github.com/Wan-Video/Wan2.2
+License: Apache-2.0
+Notice:
+  Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
+File:
+  cosmos_framework/model/vfm/tokenizers/wan2pt2_vae_4x16x16.py
+
+Detectron2 lazy config helpers
+Source: https://github.com/facebookresearch/detectron2
+License: Apache-2.0
+Notice:
+  Copyright (c) Facebook, Inc. and its affiliates.
+File:
+  cosmos_framework/utils/lazy_config/__init__.py
+
+MV-TAP (multi-view point tracking head)
+Source: https://github.com/cvlab-kaist/MV-TAP
+License: MIT
+Notice:
+  Copyright (c) 2025 cvlab-kaist
+Files (adapted or vendored from MV-TAP):
+  cosmos_framework/model/vfm/tracking/blocks.py
+  cosmos_framework/model/vfm/tracking/cam.py
+  cosmos_framework/model/vfm/tracking/head.py
+  cosmos_framework/model/vfm/tracking/losses.py
+  cosmos_framework/model/vfm/tracking/ops.py
+  cosmos_framework/model/vfm/tracking/viz.py
+License text:
+  MIT License
+
+  Copyright (c) 2025 cvlab-kaist
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.

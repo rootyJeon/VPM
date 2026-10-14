@@ -1,0 +1,5 @@
+# Image-to-video from the first frame of the clip, 80 future frames (frames 1..80 scored).
+name: i2v-first-frame
+ref_frame: 0
+context_frames: 1
+horizon: 80

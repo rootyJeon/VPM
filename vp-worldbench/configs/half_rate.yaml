@@ -1,0 +1,6 @@
+# Same time span as vpm-v1 at half the frame rate: frames 18, 20, ..., 80 are scored (for generators with fewer frames;
+# declare the generator's own fps in each prediction's meta.json, or deliver the 33-frame window directly).
+name: half-rate
+ref_frame: 16
+horizon: 32
+frame_step: 2

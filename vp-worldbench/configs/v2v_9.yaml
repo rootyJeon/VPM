@@ -1,0 +1,5 @@
+# Video-to-video: frames 8..16 of every view are given, frames 17..80 are scored (same scored frames as vpm-v1).
+name: v2v-9
+ref_frame: 16
+context_frames: 9
+horizon: 64

@@ -1,0 +1,78 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: OpenMDW-1.1
+#
+# Generic multi-node Slurm example for the VPM training stages. Copy it, fill in the <...> placeholders and
+# adapt the resources to your cluster. Submit from the repository root:
+#
+#   STAGE=1 sbatch training/train.sbatch.example
+#   STAGE=2 sbatch training/train.sbatch.example trainer.logging_iter=10     # extra args = Hydra overrides
+#
+# One task per node runs training/train_stage$STAGE.sh, which starts torchrun with NPROC_PER_NODE workers.
+# Every variable of the launcher contract (training/_launch_common.sh: VPM_DATA_ROOT, BASE_CHECKPOINT_PATH,
+# WAN_VAE_PATH, OUTPUT_ROOT, RATIOS, MAX_TOKENS, LR, MAX_ITER, ...) can be exported before sbatch or set below.
+#
+# Wall-clock limit: Slurm sends SIGUSR1 to this batch shell 180 s before the time limit (--signal). The trap creates
+# $SLURM_LOG_DIR/SIGUSR1_RECEIVED; the trainer checks for that file after every step, saves a checkpoint and exits.
+# Submitting the same job again (e.g. sbatch --dependency=afterany:<job id> ...) resumes from that checkpoint.
+#
+#SBATCH --job-name=vpm-train
+#SBATCH --account=<ACCOUNT>
+#SBATCH --partition=<PARTITION>
+#SBATCH --nodes=4
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=8
+#SBATCH --cpus-per-task=<CPUS_PER_NODE>
+#SBATCH --time=12:00:00
+#SBATCH --output=%x-%j.out
+#SBATCH --signal=B:SIGUSR1@180
+
+set -euo pipefail
+
+STAGE="${STAGE:-1}"
+[[ "$STAGE" =~ ^[123]$ ]] || { echo "STAGE must be 1, 2 or 3 (got '$STAGE')" >&2; exit 1; }
+
+VPM_ROOT="${VPM_ROOT:-$SLURM_SUBMIT_DIR}"
+cd "$VPM_ROOT"
+[[ -f "training/train_stage$STAGE.sh" ]] || { echo "submit from the VPM repository root or set VPM_ROOT" >&2; exit 1; }
+
+# Paths (relative paths are resolved against the repository root). Use a shared filesystem for OUTPUT_ROOT.
+export VPM_DATA_ROOT="${VPM_DATA_ROOT:-data}"
+export OUTPUT_ROOT="${OUTPUT_ROOT:-outputs}"
+# export BASE_CHECKPOINT_PATH=checkpoints/Cosmos3-Nano     # stage 1 default; stages 2/3 default to the latest
+#                                                          # checkpoint of the previous stage under OUTPUT_ROOT
+# export WAN_VAE_PATH=checkpoints/wan22_vae/Wan2.2_VAE.pth
+# export HF_HOME=<shared Hugging Face cache>
+# export HF_HUB_OFFLINE=1                                  # compute nodes without internet (prefetch the tokenizer)
+# export WANDB_MODE=online
+
+# Distributed topology from Slurm.
+export NNODES="$SLURM_NNODES"
+export NPROC_PER_NODE="${NPROC_PER_NODE:-${SLURM_GPUS_ON_NODE:-8}}"
+MASTER_ADDR="$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)"
+export MASTER_ADDR
+export MASTER_PORT="${MASTER_PORT:-29500}"
+export RDZV_ID="$SLURM_JOB_ID"
+
+# Emergency checkpoint before the time limit (consumed by the trainer's termination-signal callback).
+[[ "$OUTPUT_ROOT" == /* ]] && out_abs="$OUTPUT_ROOT" || out_abs="$VPM_ROOT/$OUTPUT_ROOT"
+export SLURM_LOG_DIR="${SLURM_LOG_DIR:-$out_abs/slurm_signal/$SLURM_JOB_ID}"
+mkdir -p "$SLURM_LOG_DIR"
+rm -f "$SLURM_LOG_DIR/SIGUSR1_RECEIVED"
+trap 'echo "SIGUSR1: requesting an emergency checkpoint"; touch "$SLURM_LOG_DIR/SIGUSR1_RECEIVED"' USR1
+
+echo "VPM stage $STAGE: $NNODES nodes x $NPROC_PER_NODE GPUs, master $MASTER_ADDR:$MASTER_PORT"
+
+# shellcheck disable=SC2016
+srun --ntasks-per-node=1 --kill-on-bad-exit=1 \
+    bash -c 'NODE_RANK="$SLURM_NODEID" exec bash "training/train_stage$0.sh" "$@"' "$STAGE" "$@" &
+SRUN_PID=$!
+
+# The trap only runs while the shell waits, so wait in a loop until srun itself has exited.
+rc=0
+while :; do
+    wait "$SRUN_PID" && rc=0 || rc=$?
+    kill -0 "$SRUN_PID" 2>/dev/null || break
+done
+echo "srun exited with code $rc"
+exit "$rc"

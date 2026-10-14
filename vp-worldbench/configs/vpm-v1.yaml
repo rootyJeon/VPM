@@ -1,0 +1,16 @@
+# VP-WorldBench v1 generation protocol, written out explicitly (identical to `--protocol vpm-v1`).
+# Every key is a field of vpm_worldbench.Protocol; omitted keys take their defaults (docs/PROTOCOL.md).
+name: vpm-v1
+ref_frame: 16          # conditioning frame t_ref; GT tracks are queried here
+context_frames: 1      # 1 = image-to-video
+horizon: 64            # scored frames t_ref+1 .. t_ref+64
+frame_step: 1
+views: null            # all views
+eval_size:             # (W, H) metric grid per subset
+  Simul-Robot: [480, 480]
+  Simul-General: [480, 480]
+  Real-Robot: [848, 480]
+  Real-General: [640, 480]
+resize_mode: {}        # default 'resize' for every subset
+text: caption
+camera_conditioning: false

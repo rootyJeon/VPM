@@ -1,0 +1,5 @@
+# Video-to-video with the whole prefix: frames 0..16 given, frames 17..80 scored.
+name: v2v-17
+ref_frame: 16
+context_frames: 17
+horizon: 64
