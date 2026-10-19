@@ -12,7 +12,8 @@
 
 > [Byungwoo Jeon](https://rootyjeon.github.io/)<sup>1\*</sup>, [Sunghwan Hong](https://sunghwanhong.github.io/)<sup>2\*</sup>, [Dohyeon Kim](https://openreview.net/profile?id=~Dohyeon_Kim5)<sup>3</sup>, [Jonghoon Lee](https://jhoonjwa.github.io/)<sup>1</sup>, [Jungwoo Park](https://scholar.google.com/citations?user=k2e82kcAAAAJ&hl=en)<sup>1</sup>, [Inhee Lee](https://blog.sulwon.com/)<sup>3</sup>, [Doosan Baek](https://pslab.ai/en/)<sup>6</sup>, [Jinil Kim](https://pslab.ai/en/)<sup>6</sup>, [Taehyun Lim](https://pslab.ai/en/)<sup>6</sup>, [Hanbyul Joo](https://jhugestar.github.io/)<sup>3,5</sup>, [Marc Pollefeys](https://people.inf.ethz.ch/pomarc/)<sup>2</sup>, [Saining Xie](https://www.sainingxie.com/)<sup>4†</sup>, [Jinwoo Shin](https://alinlab.kaist.ac.kr/shin.html)<sup>1,5†</sup>
 >
-> <sup>1</sup>KAIST, <sup>2</sup>ETH Zürich, <sup>3</sup>Seoul National University, <sup>4</sup>New York University, <sup>5</sup>RLWRLD, <sup>6</sup>Physics Sim Lab &emsp; <sup>\*</sup>Equal contribution, <sup>†</sup>Equal advising
+> <sup>1</sup>KAIST, <sup>2</sup>ETH Zürich, <sup>3</sup>Seoul National University, <sup>4</sup>New York University, <sup>5</sup>RLWRLD, <sup>6</sup>Physics Sim Lab<br>
+> <sup>\*</sup>Equal contribution, <sup>†</sup>Equal advising
 >
 > We present **Video-Point Model (VPM)**, a multi-view video world model built on [NVIDIA Cosmos3](https://huggingface.co/nvidia/Cosmos3-Nano).
 > - 🎥 **Multi-view Video**: Generating synchronized videos from multi-cameras.
