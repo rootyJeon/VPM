@@ -108,6 +108,8 @@ Decode real and generated videos the same way, which the evaluator does, and sub
 in `vpm_worldbench/metrics/met3r.py`.
 
 <a id="delta"></a>
+<a id="delta"></a>
+
 ## δ: 3D motion accuracy of the generated video
 
 The generated multi-view video is lifted to 3D point tracks. The tracks of the GT query points are compared with the
@@ -175,17 +177,7 @@ its query position, and pools them over the clip's tracks. There the frozen-poin
 threshold, so it scores **0 by construction**. δ_mov therefore measures only the motion itself. Clips without such
 entries have no δ_mov. The set is defined by the GT alone, so it is the same for every method.
 
-On all 1,200 clips (`vpm-v1`, main point group; δ mov. on the 1,107 clips with moving points), the reference rows and
-the best of the three baselines score:
-
-| | Simul-Robot | Simul-General | Real-Robot | Real-General |
-|---|---|---|---|---|
-| δ_avg: real video / frozen points | 60.7 / **84.5** | 60.1 / 7.3 | 75.1 / 61.9 | 68.0 / 37.6 |
-| δ_avg: best baseline | 45.3 | 25.2 | 37.2 | 31.9 |
-| δ mov.: real video / frozen points | 22.0 / 0 | 55.7 / 0 | 48.2 / 0 | 48.0 / 0 |
-| δ mov.: best baseline | 6.4 | 17.8 | 24.3 | 4.0 |
-
-- Under δ_avg, frozen points beat the real video on Simul-Robot, and beat every model on Real-Robot and Real-General.
+- Under δ_avg, a frozen-points prediction can score high where most points stay still, even above the real video.
 - Under δ mov., the real video is always the ceiling and frozen points the floor.
 
 Report δ mov. next to δ_avg. Read δ_avg together with the frozen row.

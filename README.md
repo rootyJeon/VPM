@@ -1,10 +1,13 @@
+<p align="center">
+  <img src="docs/vpm-icon.svg" alt="VPM" width="120">
+</p>
+
 <h1 align="center">Learning the 4D World through Point Trajectory Forecasting</h1>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/2610.06940"><img src="https://img.shields.io/badge/arXiv-2610.06940-b31b1b.svg?logo=arxiv&logoColor=white" alt="arXiv"></a>
   <a href="https://rootyjeon.github.io/video-point-model/"><img src="https://img.shields.io/badge/Project-Page-1f6feb.svg?logo=googlechrome&logoColor=white" alt="Project page"></a>
-  <a href="https://huggingface.co/datasets/rooty2020/VPM-Data"><img src="https://img.shields.io/badge/VPM--Data-Dataset-FFD21E.svg?logo=huggingface&logoColor=000" alt="VPM-Data"></a>
-  <a href="https://huggingface.co/datasets/rooty2020/VP-WorldBench"><img src="https://img.shields.io/badge/VP--WorldBench-Benchmark-FFD21E.svg?logo=huggingface&logoColor=000" alt="VP-WorldBench"></a>
+  <a href="https://huggingface.co/datasets/rooty2020/VPM-Data"><img src="https://img.shields.io/badge/VPM--Data-Dataset-FFD21E.svg?logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NSIgaGVpZ2h0PSI4OCIgZmlsbD0ibm9uZSI%2BPHBhdGggZmlsbD0iI0ZGRDIxRSIgZD0iTTQ3LjIxIDc2LjVhMzQuNzUgMzQuNzUgMCAxIDAgMC02OS41IDM0Ljc1IDM0Ljc1IDAgMCAwIDAgNjkuNVoiLz48cGF0aCBmaWxsPSIjRkY5RDBCIiBkPSJNODEuOTYgNDEuNzVhMzQuNzUgMzQuNzUgMCAxIDAtNjkuNSAwIDM0Ljc1IDM0Ljc1IDAgMCAwIDY5LjUgMFptLTczLjUgMGEzOC43NSAzOC43NSAwIDEgMSA3Ny41IDAgMzguNzUgMzguNzUgMCAwIDEtNzcuNSAwWiIvPjxwYXRoIGZpbGw9IiMzQTNCNDUiIGQ9Ik01OC41IDMyLjNjMS4yOC40NCAxLjc4IDMuMDYgMy4wNyAyLjM4YTUgNSAwIDEgMC02Ljc2LTIuMDdjLjYxIDEuMTUgMi41NS0uNzIgMy43LS4zMlpNMzQuOTUgMzIuM2MtMS4yOC40NC0xLjc5IDMuMDYtMy4wNyAyLjM4YTUgNSAwIDEgMSA2Ljc2LTIuMDdjLS42MSAxLjE1LTIuNTYtLjcyLTMuNy0uMzJaIi8%2BPHBhdGggZmlsbD0iI0ZGMzIzRCIgZD0iTTQ2Ljk2IDU2LjI5YzkuODMgMCAxMy04Ljc2IDEzLTEzLjI2IDAtMi4zNC0xLjU3LTEuNi00LjA5LS4zNi0yLjMzIDEuMTUtNS40NiAyLjc0LTguOSAyLjc0LTcuMTkgMC0xMy02Ljg4LTEzLTIuMzhzMy4xNiAxMy4yNiAxMyAxMy4yNloiLz48cGF0aCBmaWxsPSIjM0EzQjQ1IiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zOS40MyA1NGE4LjcgOC43IDAgMCAxIDUuMy00LjQ5Yy40LS4xMi44MS41NyAxLjI0IDEuMjguNC42OC44MiAxLjM3IDEuMjQgMS4zNy40NSAwIC45LS42OCAxLjMzLTEuMzUuNDUtLjcuODktMS4zOCAxLjMyLTEuMjVhOC42MSA4LjYxIDAgMCAxIDUgNC4xN2MzLjczLTIuOTQgNS4xLTcuNzQgNS4xLTEwLjcgMC0yLjM0LTEuNTctMS42LTQuMDktLjM2bC0uMTQuMDdjLTIuMzEgMS4xNS01LjM5IDIuNjctOC43NyAyLjY3cy02LjQ1LTEuNTItOC43Ny0yLjY3Yy0yLjYtMS4yOS00LjIzLTIuMS00LjIzLjI5IDAgMy4wNSAxLjQ2IDguMDYgNS40NyAxMC45N1oiIGNsaXAtcnVsZT0iZXZlbm9kZCIvPjxwYXRoIGZpbGw9IiNGRjlEMEIiIGQ9Ik03MC43MSAzN2EzLjI1IDMuMjUgMCAxIDAgMC02LjUgMy4yNSAzLjI1IDAgMCAwIDAgNi41Wk0yNC4yMSAzN2EzLjI1IDMuMjUgMCAxIDAgMC02LjUgMy4yNSAzLjI1IDAgMCAwIDAgNi41Wk0xNy41MiA0OGMtMS42MiAwLTMuMDYuNjYtNC4wNyAxLjg3YTUuOTcgNS45NyAwIDAgMC0xLjMzIDMuNzYgNy4xIDcuMSAwIDAgMC0xLjk0LS4zYy0xLjU1IDAtMi45NS41OS0zLjk0IDEuNjZhNS44IDUuOCAwIDAgMC0uOCA3IDUuMyA1LjMgMCAwIDAtMS43OSAyLjgyYy0uMjQuOS0uNDggMi44LjggNC43NGE1LjIyIDUuMjIgMCAwIDAtLjM3IDUuMDJjMS4wMiAyLjMyIDMuNTcgNC4xNCA4LjUyIDYuMSAzLjA3IDEuMjIgNS44OSAyIDUuOTEgMi4wMWE0NC4zMyA0NC4zMyAwIDAgMCAxMC45MyAxLjZjNS44NiAwIDEwLjA1LTEuOCAxMi40Ni01LjM0IDMuODgtNS42OSAzLjMzLTEwLjktMS43LTE1LjkyLTIuNzctMi43OC00LjYyLTYuODctNS03Ljc3LS43OC0yLjY2LTIuODQtNS42Mi02LjI1LTUuNjJhNS43IDUuNyAwIDAgMC00LjYgMi40NmMtMS0xLjI2LTEuOTgtMi4yNS0yLjg2LTIuODJBNy40IDcuNCAwIDAgMCAxNy41MiA0OFptMCA0Yy41MSAwIDEuMTQuMjIgMS44Mi42NSAyLjE0IDEuMzYgNi4yNSA4LjQzIDcuNzYgMTEuMTguNS45MiAxLjM3IDEuMzEgMi4xNCAxLjMxIDEuNTUgMCAyLjc1LTEuNTMuMTUtMy40OC0zLjkyLTIuOTMtMi41NS03LjcyLS42OC04LjAxLjA4LS4wMi4xNy0uMDIuMjQtLjAyIDEuNyAwIDIuNDUgMi45MyAyLjQ1IDIuOTNzMi4yIDUuNTIgNS45OCA5LjNjMy43NyAzLjc3IDMuOTcgNi44IDEuMjIgMTAuODMtMS44OCAyLjc1LTUuNDcgMy41OC05LjE2IDMuNTgtMy44MSAwLTcuNzMtLjktOS45Mi0xLjQ2LS4xMS0uMDMtMTMuNDUtMy44LTExLjc2LTcgLjI4LS41NC43NS0uNzYgMS4zNC0uNzYgMi4zOCAwIDYuNyAzLjU0IDguNTcgMy41NC40MSAwIC43LS4xNy44My0uNi43OS0yLjg1LTEyLjA2LTQuMDUtMTAuOTgtOC4xNy4yLS43My43MS0xLjAyIDEuNDQtMS4wMiAzLjE0IDAgMTAuMiA1LjUzIDExLjY4IDUuNTMuMTEgMCAuMi0uMDMuMjQtLjEuNzQtMS4yLjMzLTIuMDQtNC45LTUuMi01LjIxLTMuMTYtOC44OC01LjA2LTYuOC03LjMzLjI0LS4yNi41OC0uMzggMS0uMzggMy4xNyAwIDEwLjY2IDYuODIgMTAuNjYgNi44MnMyLjAyIDIuMSAzLjI1IDIuMWMuMjggMCAuNTItLjEuNjgtLjM4Ljg2LTEuNDYtOC4wNi04LjIyLTguNTYtMTEuMDEtLjM0LTEuOS4yNC0yLjg1IDEuMzEtMi44NVoiLz48cGF0aCBmaWxsPSIjRkZEMjFFIiBkPSJNMzguNiA3Ni42OWMyLjc1LTQuMDQgMi41NS03LjA3LTEuMjItMTAuODQtMy43OC0zLjc3LTUuOTgtOS4zLTUuOTgtOS4zcy0uODItMy4yLTIuNjktMi45Yy0xLjg3LjMtMy4yNCA1LjA4LjY4IDguMDEgMy45MSAyLjkzLS43OCA0LjkyLTIuMjkgMi4xNy0xLjUtMi43NS01LjYyLTkuODItNy43Ni0xMS4xOC0yLjEzLTEuMzUtMy42My0uNi0zLjEzIDIuMi41IDIuNzkgOS40MyA5LjU1IDguNTYgMTEtLjg3IDEuNDctMy45My0xLjcxLTMuOTMtMS43MXMtOS41Ny04LjcxLTExLjY2LTYuNDRjLTIuMDggMi4yNyAxLjU5IDQuMTcgNi44IDcuMzMgNS4yMyAzLjE2IDUuNjQgNCA0LjkgNS4yLS43NSAxLjItMTIuMjgtOC41My0xMy4zNi00LjQtMS4wOCA0LjExIDExLjc3IDUuMyAxMC45OCA4LjE1LS44IDIuODUtOS4wNi01LjM4LTEwLjc0LTIuMTgtMS43IDMuMjEgMTEuNjUgNi45OCAxMS43NiA3LjAxIDQuMyAxLjEyIDE1LjI1IDMuNDkgMTkuMDgtMi4xMloiLz48cGF0aCBmaWxsPSIjRkY5RDBCIiBkPSJNNzcuNCA0OGMxLjYyIDAgMy4wNy42NiA0LjA3IDEuODdhNS45NyA1Ljk3IDAgMCAxIDEuMzMgMy43NiA3LjEgNy4xIDAgMCAxIDEuOTUtLjNjMS41NSAwIDIuOTUuNTkgMy45NCAxLjY2YTUuOCA1LjggMCAwIDEgLjggNyA1LjMgNS4zIDAgMCAxIDEuNzggMi44MmMuMjQuOS40OCAyLjgtLjggNC43NGE1LjIyIDUuMjIgMCAwIDEgLjM3IDUuMDJjLTEuMDIgMi4zMi0zLjU3IDQuMTQtOC41MSA2LjEtMy4wOCAxLjIyLTUuOSAyLTUuOTIgMi4wMWE0NC4zMyA0NC4zMyAwIDAgMS0xMC45MyAxLjZjLTUuODYgMC0xMC4wNS0xLjgtMTIuNDYtNS4zNC0zLjg4LTUuNjktMy4zMy0xMC45IDEuNy0xNS45MiAyLjc4LTIuNzggNC42My02Ljg3IDUuMDEtNy43Ny43OC0yLjY2IDIuODMtNS42MiA2LjI0LTUuNjJhNS43IDUuNyAwIDAgMSA0LjYgMi40NmMxLTEuMjYgMS45OC0yLjI1IDIuODctMi44MkE3LjQgNy40IDAgMCAxIDc3LjQgNDhabTAgNGMtLjUxIDAtMS4xMy4yMi0xLjgyLjY1LTIuMTMgMS4zNi02LjI1IDguNDMtNy43NiAxMS4xOGEyLjQzIDIuNDMgMCAwIDEtMi4xNCAxLjMxYy0xLjU0IDAtMi43NS0xLjUzLS4xNC0zLjQ4IDMuOTEtMi45MyAyLjU0LTcuNzIuNjctOC4wMWExLjU0IDEuNTQgMCAwIDAtLjI0LS4wMmMtMS43IDAtMi40NSAyLjkzLTIuNDUgMi45M3MtMi4yIDUuNTItNS45NyA5LjNjLTMuNzggMy43Ny0zLjk4IDYuOC0xLjIyIDEwLjgzIDEuODcgMi43NSA1LjQ3IDMuNTggOS4xNSAzLjU4IDMuODIgMCA3LjczLS45IDkuOTMtMS40Ni4xLS4wMyAxMy40NS0zLjggMTEuNzYtNy0uMjktLjU0LS43NS0uNzYtMS4zNC0uNzYtMi4zOCAwLTYuNzEgMy41NC04LjU3IDMuNTQtLjQyIDAtLjcxLS4xNy0uODMtLjYtLjgtMi44NSAxMi4wNS00LjA1IDEwLjk3LTguMTctLjE5LS43My0uNy0xLjAyLTEuNDQtMS4wMi0zLjE0IDAtMTAuMiA1LjUzLTExLjY4IDUuNTMtLjEgMC0uMTktLjAzLS4yMy0uMS0uNzQtMS4yLS4zNC0yLjA0IDQuODgtNS4yIDUuMjMtMy4xNiA4LjktNS4wNiA2LjgtNy4zMy0uMjMtLjI2LS41Ny0uMzgtLjk4LS4zOC0zLjE4IDAtMTAuNjcgNi44Mi0xMC42NyA2Ljgycy0yLjAyIDIuMS0zLjI0IDIuMWEuNzQuNzQgMCAwIDEtLjY4LS4zOGMtLjg3LTEuNDYgOC4wNS04LjIyIDguNTUtMTEuMDEuMzQtMS45LS4yNC0yLjg1LTEuMzEtMi44NVoiLz48cGF0aCBmaWxsPSIjRkZEMjFFIiBkPSJNNTYuMzMgNzYuNjljLTIuNzUtNC4wNC0yLjU2LTcuMDcgMS4yMi0xMC44NCAzLjc3LTMuNzcgNS45Ny05LjMgNS45Ny05LjNzLjgyLTMuMiAyLjctMi45YzEuODYuMyAzLjIzIDUuMDgtLjY4IDguMDEtMy45MiAyLjkzLjc4IDQuOTIgMi4yOCAyLjE3IDEuNTEtMi43NSA1LjYzLTkuODIgNy43Ni0xMS4xOCAyLjEzLTEuMzUgMy42NC0uNiAzLjEzIDIuMi0uNSAyLjc5LTkuNDIgOS41NS04LjU1IDExIC44NiAxLjQ3IDMuOTItMS43MSAzLjkyLTEuNzFzOS41OC04LjcxIDExLjY2LTYuNDRjMi4wOCAyLjI3LTEuNTggNC4xNy02LjggNy4zMy01LjIzIDMuMTYtNS42MyA0LTQuOSA1LjIuNzUgMS4yIDEyLjI4LTguNTMgMTMuMzYtNC40IDEuMDggNC4xMS0xMS43NiA1LjMtMTAuOTcgOC4xNS44IDIuODUgOS4wNS01LjM4IDEwLjc0LTIuMTggMS42OSAzLjIxLTExLjY1IDYuOTgtMTEuNzYgNy4wMS00LjMxIDEuMTItMTUuMjYgMy40OS0xOS4wOC0yLjEyWiIvPjwvc3ZnPiA%3D" alt="VPM-Data"></a>
+  <a href="https://huggingface.co/datasets/rooty2020/VP-WorldBench"><img src="https://img.shields.io/badge/VP--WorldBench-Benchmark-FFD21E.svg?logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NSIgaGVpZ2h0PSI4OCIgZmlsbD0ibm9uZSI%2BPHBhdGggZmlsbD0iI0ZGRDIxRSIgZD0iTTQ3LjIxIDc2LjVhMzQuNzUgMzQuNzUgMCAxIDAgMC02OS41IDM0Ljc1IDM0Ljc1IDAgMCAwIDAgNjkuNVoiLz48cGF0aCBmaWxsPSIjRkY5RDBCIiBkPSJNODEuOTYgNDEuNzVhMzQuNzUgMzQuNzUgMCAxIDAtNjkuNSAwIDM0Ljc1IDM0Ljc1IDAgMCAwIDY5LjUgMFptLTczLjUgMGEzOC43NSAzOC43NSAwIDEgMSA3Ny41IDAgMzguNzUgMzguNzUgMCAwIDEtNzcuNSAwWiIvPjxwYXRoIGZpbGw9IiMzQTNCNDUiIGQ9Ik01OC41IDMyLjNjMS4yOC40NCAxLjc4IDMuMDYgMy4wNyAyLjM4YTUgNSAwIDEgMC02Ljc2LTIuMDdjLjYxIDEuMTUgMi41NS0uNzIgMy43LS4zMlpNMzQuOTUgMzIuM2MtMS4yOC40NC0xLjc5IDMuMDYtMy4wNyAyLjM4YTUgNSAwIDEgMSA2Ljc2LTIuMDdjLS42MSAxLjE1LTIuNTYtLjcyLTMuNy0uMzJaIi8%2BPHBhdGggZmlsbD0iI0ZGMzIzRCIgZD0iTTQ2Ljk2IDU2LjI5YzkuODMgMCAxMy04Ljc2IDEzLTEzLjI2IDAtMi4zNC0xLjU3LTEuNi00LjA5LS4zNi0yLjMzIDEuMTUtNS40NiAyLjc0LTguOSAyLjc0LTcuMTkgMC0xMy02Ljg4LTEzLTIuMzhzMy4xNiAxMy4yNiAxMyAxMy4yNloiLz48cGF0aCBmaWxsPSIjM0EzQjQ1IiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zOS40MyA1NGE4LjcgOC43IDAgMCAxIDUuMy00LjQ5Yy40LS4xMi44MS41NyAxLjI0IDEuMjguNC42OC44MiAxLjM3IDEuMjQgMS4zNy40NSAwIC45LS42OCAxLjMzLTEuMzUuNDUtLjcuODktMS4zOCAxLjMyLTEuMjVhOC42MSA4LjYxIDAgMCAxIDUgNC4xN2MzLjczLTIuOTQgNS4xLTcuNzQgNS4xLTEwLjcgMC0yLjM0LTEuNTctMS42LTQuMDktLjM2bC0uMTQuMDdjLTIuMzEgMS4xNS01LjM5IDIuNjctOC43NyAyLjY3cy02LjQ1LTEuNTItOC43Ny0yLjY3Yy0yLjYtMS4yOS00LjIzLTIuMS00LjIzLjI5IDAgMy4wNSAxLjQ2IDguMDYgNS40NyAxMC45N1oiIGNsaXAtcnVsZT0iZXZlbm9kZCIvPjxwYXRoIGZpbGw9IiNGRjlEMEIiIGQ9Ik03MC43MSAzN2EzLjI1IDMuMjUgMCAxIDAgMC02LjUgMy4yNSAzLjI1IDAgMCAwIDAgNi41Wk0yNC4yMSAzN2EzLjI1IDMuMjUgMCAxIDAgMC02LjUgMy4yNSAzLjI1IDAgMCAwIDAgNi41Wk0xNy41MiA0OGMtMS42MiAwLTMuMDYuNjYtNC4wNyAxLjg3YTUuOTcgNS45NyAwIDAgMC0xLjMzIDMuNzYgNy4xIDcuMSAwIDAgMC0xLjk0LS4zYy0xLjU1IDAtMi45NS41OS0zLjk0IDEuNjZhNS44IDUuOCAwIDAgMC0uOCA3IDUuMyA1LjMgMCAwIDAtMS43OSAyLjgyYy0uMjQuOS0uNDggMi44LjggNC43NGE1LjIyIDUuMjIgMCAwIDAtLjM3IDUuMDJjMS4wMiAyLjMyIDMuNTcgNC4xNCA4LjUyIDYuMSAzLjA3IDEuMjIgNS44OSAyIDUuOTEgMi4wMWE0NC4zMyA0NC4zMyAwIDAgMCAxMC45MyAxLjZjNS44NiAwIDEwLjA1LTEuOCAxMi40Ni01LjM0IDMuODgtNS42OSAzLjMzLTEwLjktMS43LTE1LjkyLTIuNzctMi43OC00LjYyLTYuODctNS03Ljc3LS43OC0yLjY2LTIuODQtNS42Mi02LjI1LTUuNjJhNS43IDUuNyAwIDAgMC00LjYgMi40NmMtMS0xLjI2LTEuOTgtMi4yNS0yLjg2LTIuODJBNy40IDcuNCAwIDAgMCAxNy41MiA0OFptMCA0Yy41MSAwIDEuMTQuMjIgMS44Mi42NSAyLjE0IDEuMzYgNi4yNSA4LjQzIDcuNzYgMTEuMTguNS45MiAxLjM3IDEuMzEgMi4xNCAxLjMxIDEuNTUgMCAyLjc1LTEuNTMuMTUtMy40OC0zLjkyLTIuOTMtMi41NS03LjcyLS42OC04LjAxLjA4LS4wMi4xNy0uMDIuMjQtLjAyIDEuNyAwIDIuNDUgMi45MyAyLjQ1IDIuOTNzMi4yIDUuNTIgNS45OCA5LjNjMy43NyAzLjc3IDMuOTcgNi44IDEuMjIgMTAuODMtMS44OCAyLjc1LTUuNDcgMy41OC05LjE2IDMuNTgtMy44MSAwLTcuNzMtLjktOS45Mi0xLjQ2LS4xMS0uMDMtMTMuNDUtMy44LTExLjc2LTcgLjI4LS41NC43NS0uNzYgMS4zNC0uNzYgMi4zOCAwIDYuNyAzLjU0IDguNTcgMy41NC40MSAwIC43LS4xNy44My0uNi43OS0yLjg1LTEyLjA2LTQuMDUtMTAuOTgtOC4xNy4yLS43My43MS0xLjAyIDEuNDQtMS4wMiAzLjE0IDAgMTAuMiA1LjUzIDExLjY4IDUuNTMuMTEgMCAuMi0uMDMuMjQtLjEuNzQtMS4yLjMzLTIuMDQtNC45LTUuMi01LjIxLTMuMTYtOC44OC01LjA2LTYuOC03LjMzLjI0LS4yNi41OC0uMzggMS0uMzggMy4xNyAwIDEwLjY2IDYuODIgMTAuNjYgNi44MnMyLjAyIDIuMSAzLjI1IDIuMWMuMjggMCAuNTItLjEuNjgtLjM4Ljg2LTEuNDYtOC4wNi04LjIyLTguNTYtMTEuMDEtLjM0LTEuOS4yNC0yLjg1IDEuMzEtMi44NVoiLz48cGF0aCBmaWxsPSIjRkZEMjFFIiBkPSJNMzguNiA3Ni42OWMyLjc1LTQuMDQgMi41NS03LjA3LTEuMjItMTAuODQtMy43OC0zLjc3LTUuOTgtOS4zLTUuOTgtOS4zcy0uODItMy4yLTIuNjktMi45Yy0xLjg3LjMtMy4yNCA1LjA4LjY4IDguMDEgMy45MSAyLjkzLS43OCA0LjkyLTIuMjkgMi4xNy0xLjUtMi43NS01LjYyLTkuODItNy43Ni0xMS4xOC0yLjEzLTEuMzUtMy42My0uNi0zLjEzIDIuMi41IDIuNzkgOS40MyA5LjU1IDguNTYgMTEtLjg3IDEuNDctMy45My0xLjcxLTMuOTMtMS43MXMtOS41Ny04LjcxLTExLjY2LTYuNDRjLTIuMDggMi4yNyAxLjU5IDQuMTcgNi44IDcuMzMgNS4yMyAzLjE2IDUuNjQgNCA0LjkgNS4yLS43NSAxLjItMTIuMjgtOC41My0xMy4zNi00LjQtMS4wOCA0LjExIDExLjc3IDUuMyAxMC45OCA4LjE1LS44IDIuODUtOS4wNi01LjM4LTEwLjc0LTIuMTgtMS43IDMuMjEgMTEuNjUgNi45OCAxMS43NiA3LjAxIDQuMyAxLjEyIDE1LjI1IDMuNDkgMTkuMDgtMi4xMloiLz48cGF0aCBmaWxsPSIjRkY5RDBCIiBkPSJNNzcuNCA0OGMxLjYyIDAgMy4wNy42NiA0LjA3IDEuODdhNS45NyA1Ljk3IDAgMCAxIDEuMzMgMy43NiA3LjEgNy4xIDAgMCAxIDEuOTUtLjNjMS41NSAwIDIuOTUuNTkgMy45NCAxLjY2YTUuOCA1LjggMCAwIDEgLjggNyA1LjMgNS4zIDAgMCAxIDEuNzggMi44MmMuMjQuOS40OCAyLjgtLjggNC43NGE1LjIyIDUuMjIgMCAwIDEgLjM3IDUuMDJjLTEuMDIgMi4zMi0zLjU3IDQuMTQtOC41MSA2LjEtMy4wOCAxLjIyLTUuOSAyLTUuOTIgMi4wMWE0NC4zMyA0NC4zMyAwIDAgMS0xMC45MyAxLjZjLTUuODYgMC0xMC4wNS0xLjgtMTIuNDYtNS4zNC0zLjg4LTUuNjktMy4zMy0xMC45IDEuNy0xNS45MiAyLjc4LTIuNzggNC42My02Ljg3IDUuMDEtNy43Ny43OC0yLjY2IDIuODMtNS42MiA2LjI0LTUuNjJhNS43IDUuNyAwIDAgMSA0LjYgMi40NmMxLTEuMjYgMS45OC0yLjI1IDIuODctMi44MkE3LjQgNy40IDAgMCAxIDc3LjQgNDhabTAgNGMtLjUxIDAtMS4xMy4yMi0xLjgyLjY1LTIuMTMgMS4zNi02LjI1IDguNDMtNy43NiAxMS4xOGEyLjQzIDIuNDMgMCAwIDEtMi4xNCAxLjMxYy0xLjU0IDAtMi43NS0xLjUzLS4xNC0zLjQ4IDMuOTEtMi45MyAyLjU0LTcuNzIuNjctOC4wMWExLjU0IDEuNTQgMCAwIDAtLjI0LS4wMmMtMS43IDAtMi40NSAyLjkzLTIuNDUgMi45M3MtMi4yIDUuNTItNS45NyA5LjNjLTMuNzggMy43Ny0zLjk4IDYuOC0xLjIyIDEwLjgzIDEuODcgMi43NSA1LjQ3IDMuNTggOS4xNSAzLjU4IDMuODIgMCA3LjczLS45IDkuOTMtMS40Ni4xLS4wMyAxMy40NS0zLjggMTEuNzYtNy0uMjktLjU0LS43NS0uNzYtMS4zNC0uNzYtMi4zOCAwLTYuNzEgMy41NC04LjU3IDMuNTQtLjQyIDAtLjcxLS4xNy0uODMtLjYtLjgtMi44NSAxMi4wNS00LjA1IDEwLjk3LTguMTctLjE5LS43My0uNy0xLjAyLTEuNDQtMS4wMi0zLjE0IDAtMTAuMiA1LjUzLTExLjY4IDUuNTMtLjEgMC0uMTktLjAzLS4yMy0uMS0uNzQtMS4yLS4zNC0yLjA0IDQuODgtNS4yIDUuMjMtMy4xNiA4LjktNS4wNiA2LjgtNy4zMy0uMjMtLjI2LS41Ny0uMzgtLjk4LS4zOC0zLjE4IDAtMTAuNjcgNi44Mi0xMC42NyA2Ljgycy0yLjAyIDIuMS0zLjI0IDIuMWEuNzQuNzQgMCAwIDEtLjY4LS4zOGMtLjg3LTEuNDYgOC4wNS04LjIyIDguNTUtMTEuMDEuMzQtMS45LS4yNC0yLjg1LTEuMzEtMi44NVoiLz48cGF0aCBmaWxsPSIjRkZEMjFFIiBkPSJNNTYuMzMgNzYuNjljLTIuNzUtNC4wNC0yLjU2LTcuMDcgMS4yMi0xMC44NCAzLjc3LTMuNzcgNS45Ny05LjMgNS45Ny05LjNzLjgyLTMuMiAyLjctMi45YzEuODYuMyAzLjIzIDUuMDgtLjY4IDguMDEtMy45MiAyLjkzLjc4IDQuOTIgMi4yOCAyLjE3IDEuNTEtMi43NSA1LjYzLTkuODIgNy43Ni0xMS4xOCAyLjEzLTEuMzUgMy42NC0uNiAzLjEzIDIuMi0uNSAyLjc5LTkuNDIgOS41NS04LjU1IDExIC44NiAxLjQ3IDMuOTItMS43MSAzLjkyLTEuNzFzOS41OC04LjcxIDExLjY2LTYuNDRjMi4wOCAyLjI3LTEuNTggNC4xNy02LjggNy4zMy01LjIzIDMuMTYtNS42MyA0LTQuOSA1LjIuNzUgMS4yIDEyLjI4LTguNTMgMTMuMzYtNC40IDEuMDggNC4xMS0xMS43NiA1LjMtMTAuOTcgOC4xNS44IDIuODUgOS4wNS01LjM4IDEwLjc0LTIuMTggMS42OSAzLjIxLTExLjY1IDYuOTgtMTEuNzYgNy4wMS00LjMxIDEuMTItMTUuMjYgMy40OS0xOS4wOC0yLjEyWiIvPjwvc3ZnPiA%3D" alt="VP-WorldBench"></a>
 </p>
 
 <div align="center">
@@ -14,21 +17,21 @@
   <a href="https://jhoonjwa.github.io/">Jonghoon&nbsp;Lee</a><sup>1</sup> &ensp;<b>&middot;</b>&ensp;
   <a href="https://scholar.google.com/citations?user=k2e82kcAAAAJ&hl=en">Jungwoo&nbsp;Park</a><sup>1</sup> &ensp;<b>&middot;</b>&ensp;
   <a href="https://blog.sulwon.com/">Inhee&nbsp;Lee</a><sup>3</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://pslab.ai/en/">Doosan&nbsp;Baek</a><sup>5</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://pslab.ai/en/">Jinil&nbsp;Kim</a><sup>5</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://pslab.ai/en/">Taehyun&nbsp;Lim</a><sup>5</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://jhugestar.github.io/">Hanbyul&nbsp;Joo</a><sup>3,4</sup> &ensp;<b>&middot;</b>&ensp;
+  <a href="https://pslab.ai/en/">Doosan&nbsp;Baek</a><sup>6</sup> &ensp;<b>&middot;</b>&ensp;
+  <a href="https://pslab.ai/en/">Jinil&nbsp;Kim</a><sup>6</sup> &ensp;<b>&middot;</b>&ensp;
+  <a href="https://pslab.ai/en/">Taehyun&nbsp;Lim</a><sup>6</sup> &ensp;<b>&middot;</b>&ensp;
+  <a href="https://jhugestar.github.io/">Hanbyul&nbsp;Joo</a><sup>3,5</sup> &ensp;<b>&middot;</b>&ensp;
   <a href="https://people.inf.ethz.ch/pomarc/">Marc&nbsp;Pollefeys</a><sup>2</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://www.sainingxie.com/">Saining&nbsp;Xie</a><sup>6&dagger;</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://alinlab.kaist.ac.kr/shin.html">Jinwoo&nbsp;Shin</a><sup>1,4&dagger;</sup>
+  <a href="https://www.sainingxie.com/">Saining&nbsp;Xie</a><sup>4&dagger;</sup> &ensp;<b>&middot;</b>&ensp;
+  <a href="https://alinlab.kaist.ac.kr/shin.html">Jinwoo&nbsp;Shin</a><sup>1,5&dagger;</sup>
   <br>
   <br>
-  <sup>1</sup>KAIST &emsp; <sup>2</sup>ETH Zürich &emsp; <sup>3</sup> Seoul National University &emsp; <sup>4</sup>RLWRLD &emsp; <sup>5</sup>Physics Sim Lab &emsp; <sup>6</sup>New York University
+  <sup>1</sup>KAIST &emsp; <sup>2</sup>ETH Zürich &emsp; <sup>3</sup>Seoul National University &emsp; <sup>4</sup>New York University &emsp; <sup>5</sup>RLWRLD &emsp; <sup>6</sup>Physics Sim Lab
   <br>
   <sup>*</sup>Equal Contribution &emsp; <sup>&dagger;</sup>Equal Advising &emsp;<br>
 </div>
 
-<h3 align="center">[<a href="https://rootyjeon.github.io/video-point-model/">project page</a>]&emsp;[<a href="https://arxiv.org/abs/2410.06940">arXiv</a>]</h3>
+<h3 align="center">[<a href="https://rootyjeon.github.io/video-point-model/">project page</a>]</h3>
 
 <br>
 
@@ -37,12 +40,6 @@
 - 🎥 **Multi-view Video**: Generating synchronized videos from multi-cameras.
 - 📍 **3D Point Tracks**: Consistent 3D points across views, read from its own attention features.
 - 🦾 **Robot action**: Predicting a robot action chunk together with the future frames.
-
-## TODO
-- [X] Release VPM-Data and VP-WorldBench
-- [X] Release inference code
-- [X] Release training code
-- [ ] Release extended VPM-Data with 1M samples (expected: 12/21)
 
 ## 🔧 Installation
 
@@ -69,29 +66,52 @@ Details for download, results, and the evaluation on other tasks are in [vp-worl
 
 ## 🗂️ VPM-Data
 
-VPM-Data is the training set of VPM: **10K simulated clips** that pair synchronized multi-view videos with persistent 3D point trajectories. It has 8,000 tabletop manipulation clips and 2,000 urban clips of pedestrians and vehicles captured by moving cameras. Each views are captured from different initial frames.
+VPM-Data is the training set of VPM: **10K simulated clips** that pair synchronized multi-view videos with persistent
+3D point trajectories. It has 8,000 tabletop manipulation clips, in which a Fourier GR-1 T2 humanoid picks and places
+objects among clutter, and 2,000 urban clips of pedestrians and vehicles filmed by moving cameras.
 
-Every clip comes with 
+Every clip comes with
 
-- 🎥 **Multi-view videos** are time-synchronized across the cameras
-- 📷 **Camera intrinsic / extrinsic** for every view and frame
-- 📍 **3D point tracks** on the robot, the manipulated objects, people and vehicles
-- 🌊 **Depth maps** rendered for every view and frame
-- 📝 **Language caption** for each samples
+- 🎥 **multi-view videos**, time-synchronized across the cameras;
+- 📷 **camera intrinsics and extrinsics** for every view and frame;
+- 📍 **persistent 3D point trajectories** on the robot, the manipulated objects, people and vehicles, with per-view visibility;
+- 🌊 **depth maps** rendered for every view and frame;
+- 📝 **language captions**;
+- 🏷️ **metadata**, such as object and actor labels, target visibility states (visible, occluded, out of frame),
+  camera motion types, and scene and task attributes.
 
-You can use VPM-Data for diverse tasks such as video generation, 3D/4D reconstruction, depth estimation, human motion & pose estimation, and video reasoning.
-Data and their formats are described on the [🤗 dataset card](https://huggingface.co/datasets/rooty2020/VPM-Data).
-We plan to release extended version of VPM-Data (1M) captured from both simulation and real-world.
+All annotations come from the simulator, so they are exact and aligned across views and time. This makes VPM-Data
+useful well beyond world modeling:
+
+| research task | annotations used |
+|:--|:--|
+| Multi-view and camera-controlled video generation | videos, cameras, captions |
+| 3D/4D reconstruction and novel view synthesis | videos, cameras, depth |
+| Depth estimation (monocular, multi-view, video) | videos, depth |
+| Camera pose estimation | videos, cameras |
+| 2D/3D and multi-view point tracking, scene flow | 3D trajectories, visibility |
+| Human motion estimation and forecasting | 3D trajectories on people, cameras |
+| Object and vehicle motion estimation | 3D trajectories on objects and vehicles, cameras |
+| Robot manipulation and hand–object interaction | robot and object trajectories, captions |
+| Occlusion reasoning and object permanence | visibility, depth |
+| Video understanding (captioning, grounding, video QA) | videos, captions, metadata |
+
+The files and their formats are described on the [🤗 dataset card](https://huggingface.co/datasets/rooty2020/VPM-Data).
 
 ## 🦾 Robot Data with 3D Point Trajectories
 
-We also release the robot manipulation data with 3D point trajectories that we built for VPM. Every frame comes with persistent, metric 3D points on the robot arm and gripper (and the manipulated objects in simulation), computed from the robot CAD model and the recorded robot or simulator states, together with calibrated multi-view videos and language. DROID and RoboCasa episodes are cut into language-annotated subtask clips, and real DROID episodes are kept only when the projected robot model matches the robot in the image.
+We also release the robot manipulation data with 3D point trajectories that we built for VPM. Every frame comes with
+persistent, metric 3D points on the robot arm and gripper (and the manipulated objects in simulation), computed from
+the robot CAD model and the recorded robot or simulator states instead of a visual point tracker, together with
+calibrated multi-view videos and language. DROID-VP keeps whole DROID episodes with the calibration and per-frame
+poses of all three cameras (the data VPM-DROID is trained on), and RoboCasa episodes are cut into language-annotated
+subtask clips. The curation is described on each dataset card and in Appendix B.2 of the paper.
 
 | dataset | source | samples | views | 3D points per frame | size | download |
 |:--|:--|:--|:--|:--|:--|:--|
-| DROID-VP | [DROID](https://droid-dataset.github.io/) | 89,312 subtask clips from 28,308 episodes | 2 × 1280×720, 15 fps | 512 arm + 256 gripper | 327 GB | [🤗 DROID-VP](https://huggingface.co/datasets/rooty2020/DROID-VP) |
-| LIBERO-VP | [LIBERO](https://libero-project.github.io/) | 6,500 episodes, 130 tasks | 3 × 256×256, 20 fps | 512 arm + 256 gripper + 256 object | 13.8 GB | [🤗 LIBERO-VP](https://huggingface.co/datasets/rooty2020/LIBERO-VP) |
-| RoboCasa-VP | [RoboCasa365](https://robocasa.ai/) | 217,594 subtask clips from 24,504 episodes, 235 tasks | 3 × 256×256, 20 fps | 512 arm + 256 gripper + 256 per object | 487 GB | [🤗 RoboCasa-VP](https://huggingface.co/datasets/rooty2020/RoboCasa-VP) |
+| DROID-VP | [DROID](https://droid-dataset.github.io/) (real) | 50,430 episodes, 17,982 with point tracks | 3 × 320×180, 15 fps | 512 arm + 256 gripper | 1.03 TB | [🤗 DROID-VP](https://huggingface.co/datasets/rooty2020/DROID-VP) |
+| LIBERO-VP | [LIBERO](https://libero-project.github.io/) (sim) | 6,500 episodes, 130 tasks | 3 × 256×256, 20 fps | 512 arm + 256 gripper + 256 object | 13.8 GB | [🤗 LIBERO-VP](https://huggingface.co/datasets/rooty2020/LIBERO-VP) |
+| RoboCasa-VP | [RoboCasa365](https://robocasa.ai/) (sim) | 217,594 subtask clips from 24,504 episodes, 235 tasks | 3 × 256×256, 20 fps | 512 arm + 256 gripper + 256 per object | 487 GB | [🤗 RoboCasa-VP](https://huggingface.co/datasets/rooty2020/RoboCasa-VP) |
 
 ```bash
 hf download rooty2020/DROID-VP    --repo-type dataset --local-dir data/DROID-VP
@@ -99,7 +119,12 @@ hf download rooty2020/LIBERO-VP   --repo-type dataset --local-dir data/LIBERO-VP
 hf download rooty2020/RoboCasa-VP --repo-type dataset --local-dir data/RoboCasa-VP
 ```
 
-To train on the robot data, convert them to the slot layout in [training/DATA.md](training/DATA.md#preparing-your-own-data).
+LIBERO-VP and RoboCasa-VP ship as tar shards of self-contained samples (videos, `robot.npz` / `gripper.npz` /
+`object*.npz` point tracks and a `meta.json` with cameras and language). DROID-VP keeps the layout of the VPM-DROID
+training run (JPEG frame caches, joint / pose / camera tables and point caches) and comes with a reader,
+`tools/read_episode.py`. To train on them, convert them to the slot layout in
+[training/DATA.md](training/DATA.md#preparing-your-own-data). They follow the licenses of their source datasets
+(CC BY 4.0).
 
 ## 📦 Checkpoints
 
@@ -113,27 +138,30 @@ Cosmos3-Nano is converted to a DCP checkpoint for training, as in
 
 | model | setup | download |
 |:--|:--|:--|
-| VPM-DROID | Video + Trajectory + Action | [🤗 VPM-DROID](https://huggingface.co/rooty2020/VPM-DROID) |
+| VPM-DROID | Video + Action + Point tracks, three DROID cameras incl. wrist | [🤗 VPM-DROID](https://huggingface.co/rooty2020/VPM-DROID) |
+| VPM-DROID-v2 | Video + Action, three DROID cameras incl. wrist, trained on [DROID-VP](https://huggingface.co/datasets/rooty2020/DROID-VP) | [🤗 VPM-DROID-v2](https://huggingface.co/rooty2020/VPM-DROID-v2) |
 
 ## 🚀 Inference
 
-Generate the next 32 frames of both DROID views and the action chunk from the current observation:
+VPM-DROID takes all three DROID cameras (exterior left, exterior right, wrist) and generates the next 16 frames of
+every camera, a 16-step action chunk and, with `--tracks grid`, point tracks, from the last 9 frames and the actions
+between them:
 
 ```bash
 bash inference/infer_droid.sh \
-    --images view1.png,view2.png --cameras cameras.json \
-    --state q0,q1,q2,q3,q4,q5,q6,gripper --prompt "put the marker in the cup" \
-    --tracks grid
+    --past-frames past.npz --past-actions past_actions.npy \
+    --state q0,q1,q2,q3,q4,q5,q6,gripper --prompt "put the marker in the cup"
 ```
 
-Outputs (videos, `actions.npz`, optional 3D point tracks) are written to `outputs/droid_inference/`.
+Outputs (videos, `actions.npz`, optional point tracks) are written to `outputs/droid_inference/`.
+
 Input formats, options and multi-GPU use are in [inference/README.md](inference/README.md).
 
 ## 🏋️ Training
 
 VPM is trained from Cosmos3-Nano in three stages:
 
-| Stage | Initialization | Trains |
+| stage | starts from | trains |
 |:--|:--|:--|
 | **1**  | Cosmos3-Nano | video generator, camera conditioning |
 | **2**  | stage 1 | tracking head |
@@ -170,17 +198,14 @@ Other third-party code is listed in [NOTICE](NOTICE). Datasets follow the licens
 
 ## 📝 Citation
 
-If you find **VPM**, its dataset, and the benchmark useful for your project, please consider giving this repo a 🌟 and cite our work using the following BibTeX:
 ```bibtex
-@article{vpm2026,
-  title   = {Learning the 4D World through Point Trajectory Forecasting},
-  author  = {Author One and Author Two and Author Three},
-  journal = {arXiv preprint arXiv:2610.06940},
-  year    = {2026}
+@misc{vpm2026,
+  title  = {Learning the 4D World through Point Trajectory Forecasting},
+  author = {Jeon, Byungwoo and Hong, Sunghwan and Kim, Dohyeon and Lee, Jonghoon and Park, Jungwoo and Lee, Inhee and
+            Baek, Doosan and Kim, Jinil and Lim, Taehyun and Joo, Hanbyul and Pollefeys, Marc and Xie, Saining and
+            Shin, Jinwoo},
+  year   = {2026},
+  note   = {Preprint},
+  url    = {https://rootyjeon.github.io/video-point-model/}
 }
 ```
-
-## 📞 Contact
-
-For questions, issues, or collaborations, please contact [Byungwoo Jeon](https://rootyjeon.github.io/).<br>
-If you are interested in receiving robot data similar to VPM, please contact [Physics Sim Lab](https://pslab.ai/en/).

@@ -61,11 +61,11 @@ STAGE=2 sbatch --dependency=afterany:<job id> training/train.sbatch.example
 ## Export
 
 `scripts/export_checkpoint.py` turns a training checkpoint into sharded bf16 safetensors that
-`inference/infer_droid.sh --ckpt` loads:
+`inference/infer_droid_old.sh --ckpt` loads:
 
 ```bash
 python scripts/export_checkpoint.py \
-    --src outputs/cosmos3/sft/vpm_stage3/checkpoints/iter_000005000 --out release/VPM-DROID
+    --src outputs/cosmos3/sft/vpm_stage3/checkpoints/iter_000005000 --out release/vpm_stage3
 ```
 
 - `--ema` exports the EMA weights.

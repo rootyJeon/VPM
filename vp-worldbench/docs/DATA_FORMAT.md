@@ -9,7 +9,7 @@ language captions; most subsets add dense depth and further labels.
 | **Simul-Robot** | Unreal Engine humanoid (GR1T2) tabletop pick & place, outdoor city / indoor kitchen | 500 | 3 | 20 | 1280×1280 | 81–680 | exact (renderer): object + robot-link tracks, dense depth |
 | **Simul-General** | CARLA pedestrians (332) and vehicles (168) seen by 4 target-following cameras | 500 | 4 | 15 | 1280×1280 | 81–181 | exact (simulator): target surface tracks (skinned), dense depth |
 | **Real-Robot** | RB-Y1 two-armed robot with dexterous hands, teleoperated tabletop manipulation, ego + exo cameras | 100 | 2 | 15 | 1280×720 | 139–325 | forward kinematics of measured joints (arm + hand surface points) |
-| **Real-General** | One person moving in a lab, 4 views chosen from a 47-camera rig | 100 | 4 | 15 | 1024×768 (undistorted) | 150 | pseudo-GT: multi-view triangulated tracks (mm-level) + body-model tracks, reconstruction depth, SAM2 masks, 2D/3D keypoints |
+| **Real-General** | One person moving in a lab, 4 views chosen from a 48-camera rig | 100 | 4 | 15 | 1024×768 (undistorted) | 150 | pseudo-GT: multi-view triangulated tracks (mm-level) + body-model tracks, reconstruction depth, SAM2 masks, 2D/3D keypoints |
 
 All samples are test samples.
 

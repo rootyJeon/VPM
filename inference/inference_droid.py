@@ -1,39 +1,49 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: OpenMDW-1.1
-"""DROID inference with a VPM stage-3 checkpoint.
+"""DROID inference with VPM-DROID (three cameras, joint-position actions, no camera calibration).
 
-From the last clean frame of the DROID exterior cameras, their calibration, the robot joint state and a task
-instruction, VPM jointly generates the next 32 frames of every view and a 32-step joint-position action chunk.
-Optionally it then tracks points on the generated clip with its point-track head.
+Also runs VPM-DROID-v2 and VPM-DROID-v3 (same architecture; pass ``--ckpt``). VPM-DROID-old (two exterior cameras
+with calibration) uses ``inference/inference_droid_old.py``.
+
+From the clean past frames of the three DROID cameras (``exterior_1_left``, ``exterior_2_left``, ``wrist_left``),
+the robot joint state, the joint actions that led to the current frame and a task instruction, VPM-DROID jointly
+generates the next 16 frames of every camera and a 16-step joint-position action chunk. Optionally it then tracks
+points on the generated clip with its point-track head: 2D tracks with visibility and depth, lifted to 3D when the
+camera calibration is given (``--cameras``).
 
 Inputs (one of):
-  * an episode in the VPM data layout: ``--data-root <root>/droid --episode <scene> --frame <t0>``. The sample is
-    built by the training dataset class, so preprocessing is identical to training. Only frames up to ``t0`` and the
-    joint state at ``t0`` reach the model.
-  * raw arrays: ``--images v1.png,v2.png --cameras cameras.json --state q0,..,q6,g --prompt "..."``.
+  * an episode of DROID-VP (``rooty2020/DROID-VP``): ``--data-root <DROID-VP dir> --episode <row> --frame <t0>``.
+    The sample is built exactly as in training, without the image augmentation and the caption dropout. Only the
+    frames up to ``t0``, the state at ``t0`` and the actions before ``t0`` reach the model; the ground-truth frames
+    and actions after ``t0`` are saved next to the prediction.
+  * raw arrays: ``--past-frames frames.npz --past-actions actions.npy --state q0,..,q6,g --prompt "..."`` (the last
+    9 frames of every camera and the 8 actions between them), or ``--images ext1.png,ext2.png,wrist.png`` for the
+    current frame only (``--past-latents 1``; less accurate actions).
 
 Outputs in ``<out-dir>/<name>/``:
-  * ``video/<view>.mp4``: clean past frames followed by the generated frames, 832x480, 15 fps.
-  * ``actions.npz``: ``actions`` [32, 8] absolute joint positions (rad) and gripper (0 open .. 1 closed), one row per
-    generated frame; ``state`` [8] the input state in the same convention; ``model_rows`` [33, 8] the raw model rows
-    (row 0 = state, gripper as ``1 - g``); ``dt`` seconds per row.
-  * with ``--tracks``: ``video/<view>_tracks.mp4`` and ``tracks.npz`` with ``tracks_px`` [V, T, N, 2] in the
-    832x480 frame, ``tracks_input_px`` in input-image pixels, ``vis`` (visibility x confidence), ``conf``, ``depth``
-    [V, T, N] (metres along the camera z axis), ``xyz_cam`` and ``xyz_world`` [V, T, N, 3] (metres).
-  * ``meta.json``: inputs, sampling settings, timing and peak GPU memory.
+  * ``video/<view>.mp4``: clean past frames followed by the 16 generated frames, 320x192, 15 fps. With an episode
+    input also ``video/<view>_gt.mp4``, the same frames from the dataset.
+  * ``actions.npz``: ``actions`` [16, 8] absolute joint positions (rad) and gripper (0 open .. 1 closed), the DROID
+    actions of frames ``t0 .. t0+15``; ``state`` [8] the input state in the same convention; ``model_rows`` [R, 8]
+    the raw model rows (state, past actions, generated actions; gripper in the checkpoint's own convention, see
+    ``--gripper``); ``dt`` seconds per row.
+    With an episode input also ``gt_actions`` [16, 8].
+  * with ``--tracks grid``: ``video/<view>_tracks.mp4`` and ``tracks.npz`` with ``tracks_px`` [3, T, N, 2] in the
+    320x192 frame, ``tracks_input_px`` in input-image pixels, ``vis`` (visibility x confidence), ``conf`` and ``depth``
+    [3, T, N] (metres along the camera z axis); with camera calibration (``--cameras``, or the DROID-VP episode's own)
+    also ``xyz_cam`` and ``xyz_world`` [3, T, N, 3].
+  * ``meta.json``: inputs, sampling settings, timing, peak GPU memory and, for episodes, the action error.
 
-Launch with ``torchrun --nproc_per_node=N`` (see ``inference/infer_droid.sh``): the model is sharded over the N GPUs and
-the requested episodes run one per rank in lockstep.
+Launch with ``torchrun --nproc_per_node=N`` (see ``inference/infer_droid.sh``): the model is sharded over the N
+GPUs and the requested episodes run one per rank in lockstep.
 """
 
 from __future__ import annotations
 
 import argparse
-import copy
+import io
 import json
 import os
-import random
-import re
 import sys
 import time
 import traceback
@@ -41,73 +51,114 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+INFERENCE_DIR = Path(__file__).resolve().parent
+REPO_ROOT = INFERENCE_DIR.parent
+for _p in (str(REPO_ROOT), str(INFERENCE_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-from cosmos_framework.data.vfm.action.domain_utils import get_domain_id
-from cosmos_framework.data.vfm.action.transforms import pad_action_to_max_dim
-from cosmos_framework.data.vfm.joint_dataloader import custom_collate_fn
-from cosmos_framework.data.vfm.local_datasets.camera_bundle import build_camera_bundle
-from cosmos_framework.data.vfm.local_datasets.helper import get_aspect_ratio
-from cosmos_framework.data.vfm.sequence_packing import SequencePlan
-from cosmos_framework.utils import log, misc
+from inference_droid_old import (  # noqa: E402
+    WAN_VAE_REPO,
+    _abs,
+    _first,
+    _np,
+    _u8,
+    _write_mp4,
+    build_model,
+    load_cameras,
+    load_config,
+    resolve_checkpoint,
+    resolve_vae,
+    run_clip,
+    summarize,
+    to_batch,
+)
 
-DEFAULT_CKPT = "vpm-project/VPM-DROID"
+from cosmos_framework.data.vfm.action.domain_utils import get_domain_id  # noqa: E402
+from cosmos_framework.data.vfm.action.transforms import pad_action_to_max_dim  # noqa: E402
+from cosmos_framework.data.vfm.local_datasets.helper import get_aspect_ratio  # noqa: E402
+from cosmos_framework.data.vfm.sequence_packing import SequencePlan  # noqa: E402
+from cosmos_framework.data.vfm.utils import VIDEO_RES_SIZE_INFO  # noqa: E402
+from cosmos_framework.utils import log  # noqa: E402
+
+DEFAULT_CKPT = "rooty2020/VPM-DROID"
 DEFAULT_TOML = "examples/toml/vpm_stage3.toml"
-WAN_VAE_REPO = "Wan-AI/Wan2.2-TI2V-5B"
-WAN_VAE_FILE = "Wan2.2_VAE.pth"
-WAN_VAE_REVISION = "921dbaf3f1674a56f47e83fb80a34bac8a8f203e"
+MODEL_OVERRIDES = [
+    "model.config.camera_conditioning_enabled=false",
+    "model.config.camera_roce_mode=none",
+    "model.config.diffusion_expert_config.max_vae_latent_side_after_patchify=20",
+]
+VIEWS = ["exterior_1_left", "exterior_2_left", "wrist_left"]
+VIEWPOINT_NOTE = "3 views: third-person camera, third-person camera, wrist camera."
 DROID_DOMAIN = "oxe/droid"
+RESOLUTION = "256"
+CHUNK = 16
 STATE_DIM = 8
+MAX_ACTION_DIM = 64
+MAX_TEXT_TOKENS = 1024
 DROID_FPS = 15.0
+# Gripper channel inside the model: True = ``1 - g`` (VPM-DROID-v2/v3, NVIDIA's Cosmos3-Nano DROID policy convention),
+# False = DROID's own 0 open .. 1 closed (VPM-DROID). Set in main() from --gripper / the checkpoint's release.json.
+GRIPPER_FLIP = True
 
 
 def parse_args(argv=None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ckpt", default=os.environ.get("VPM_CHECKPOINT", DEFAULT_CKPT),
                     help="Hugging Face repo id or local dir: a release dir ([model/]*.safetensors) or a training "
-                         "iter_* dir (model/ DCP). Default: $VPM_CHECKPOINT")
+                         f"iter_* dir (model/ DCP). Default: $VPM_CHECKPOINT, else {DEFAULT_CKPT}")
     ap.add_argument("--revision", default=None, help="Hugging Face revision of --ckpt")
+    ap.add_argument("--gripper", choices=("auto", "droid", "flipped"), default="auto",
+                    help="gripper convention inside the checkpoint: droid = 0 open .. 1 closed (VPM-DROID), "
+                         "flipped = 1 - g (VPM-DROID-v2/v3). auto = the 'gripper' field of the checkpoint's "
+                         "release.json, else flipped. Inputs and outputs of this script always use DROID's convention.")
     ap.add_argument("--toml", default=DEFAULT_TOML, help="stage-3 experiment TOML the model config is built from")
     ap.add_argument("--vae-path", default=os.environ.get("WAN_VAE_PATH", ""),
                     help=f"Wan2.2 VAE weights (default: $WAN_VAE_PATH, else downloaded from {WAN_VAE_REPO})")
     ap.add_argument("--override", action="append", default=[], metavar="KEY=VALUE",
                     help="extra Hydra override applied to the config (repeatable)")
 
-    a = ap.add_argument_group("input A: episode in the VPM data layout")
-    a.add_argument("--data-root", default=os.path.join(os.environ.get("VPM_DATA_ROOT", "data"), "droid"),
-                   help="DROID dataset root with videos/, camera/, tracks/, actions/ (default: $VPM_DATA_ROOT/droid)")
-    a.add_argument("--jsonl", default="", help="episode index (default: <data-root>/train/video_dataset_file.jsonl)")
-    a.add_argument("--episode", default="", help="scene name(s) or uuid(s), comma separated")
-    a.add_argument("--frame", default="", help="last clean frame t0, one for all episodes or one per episode")
+    a = ap.add_argument_group("input A: episode of DROID-VP")
+    a.add_argument("--data-root", default=os.path.join(os.environ.get("VPM_DATA_ROOT", "data"), "DROID-VP"),
+                   help="DROID-VP root with tables/ and lerobot/ (default: $VPM_DATA_ROOT/DROID-VP)")
+    a.add_argument("--episode", default="", help="episode row(s) of tables/droid/episodes.npz, comma separated")
+    a.add_argument("--frame", default="",
+                   help="current frame t0, one for all episodes or one per episode (default: the start of the "
+                        "episode's first non-idle range of at least 17 frames)")
+    a.add_argument("--list", type=int, default=0, metavar="N", help="print the first N usable episode rows and exit")
 
-    b = ap.add_argument_group("input B: raw multi-view observation")
-    b.add_argument("--images", default="", help="one RGB image per view, comma separated (the last clean frame)")
+    b = ap.add_argument_group("input B: raw three-camera observation")
+    b.add_argument("--images", default="",
+                   help="the current frame of exterior_1_left, exterior_2_left and wrist_left, comma separated")
     b.add_argument("--past-frames", default="",
-                   help="npz with 'frames' uint8 [V, P, H, W, 3] ending at the last clean frame "
+                   help="npz with 'frames' uint8 [3, P, H, W, 3] ending at the current frame "
                         "(P >= 4 * (past_latents - 1) + 1); replaces --images")
-    b.add_argument("--cameras", default="",
-                   help="json {view: {intrinsics: 3x3 pixel K at the image size, extrinsics: 4x4 world-to-camera "
-                        "in metres}} (the data-layout keys measured_intrinsics / optimized_extrinsics also work)")
-    b.add_argument("--view-names", default="", help="views to use, comma separated, in image order "
-                                                    "(default: the --cameras order)")
+    b.add_argument("--past-actions", default="",
+                   help="npy/npz [4 * (past_latents - 1), 8]: the DROID joint actions of the past frames, oldest first "
+                        "(gripper 0 open .. 1 closed); needed when --past-latents > 1")
     b.add_argument("--state", default="", help="q0,...,q6,g: joint positions (rad) and gripper (0 open .. 1 closed)")
+    ap.add_argument("--cameras", default="",
+                    help="optional json {view: {intrinsics: 3x3 pixel K at the input image size, extrinsics: 4x4 "
+                         "world-to-camera in metres at the current frame}} for exterior_1_left, exterior_2_left and "
+                         "wrist_left; with --tracks the head is conditioned on them and the tracks are lifted to 3D. "
+                         "The extrinsics are held for the whole clip, so xyz_world of the moving wrist camera is only "
+                         "exact at the current frame. Episodes of DROID-VP use their own calibration by default")
     b.add_argument("--name", default="sample", help="output sub-directory name")
 
     ap.add_argument("--prompt", default=None,
-                    help="task instruction (input A default: the episode caption; '' = unconditional)")
-    ap.add_argument("--past-latents", type=int, default=1,
-                    help="clean past latents: 1 = last frame only, p = the last 4 * (p - 1) + 1 frames")
-    ap.add_argument("--fps", type=float, default=DROID_FPS, help="input B: frame rate of the observation")
+                    help="task instruction (input A default: the episode instruction; '' = unconditional)")
+    ap.add_argument("--past-latents", type=int, default=None, choices=(1, 2, 3),
+                    help="clean past latents: 1 = current frame only, p = the last 4 * (p - 1) + 1 frames and the "
+                         "actions between them (default: 3 for episodes and --past-frames, 1 for --images); the 9-frame "
+                         "context gives much more accurate actions")
     ap.add_argument("--num-steps", type=int, default=35)
-    ap.add_argument("--guidance", type=float, default=6.0)
+    ap.add_argument("--guidance", type=float, default=3.0)
     ap.add_argument("--shift", type=float, default=5.0)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--tracks", choices=("none", "grid", "dataset"), default="none",
-                    help="point tracks on the generated clip: queries on a regular grid in every view, or (input A) "
-                         "the dataset's cross-view track points at the first frame")
+    ap.add_argument("--tracks", choices=("none", "grid"), default="none",
+                    help="point tracks on the generated clip (experimental), queried on a regular grid in every camera")
     ap.add_argument("--grid-size", type=int, default=12)
     ap.add_argument("--track-sigma", type=float, default=0.15, help="noise level of the tracking forward pass")
     ap.add_argument("--out-dir", default=os.path.join(os.environ.get("OUTPUT_ROOT", "outputs"), "droid_inference"))
@@ -120,513 +171,380 @@ def parse_args(argv=None) -> argparse.Namespace:
             argv[i : i + 2] = [f"--state={argv[i + 1]}"]
         i += 1
     args = ap.parse_args(argv)
+    if args.list:
+        return args
     raw = bool(args.images or args.past_frames)
     if bool(args.episode) == raw:
         ap.error("give either --episode (input A) or --images/--past-frames (input B)")
-    if raw and (not args.cameras or not args.state or args.prompt is None):
-        ap.error("input B needs --cameras, --state and --prompt")
-    if raw and args.tracks == "dataset":
-        ap.error("--tracks dataset needs input A")
-    if args.past_latents < 1:
-        ap.error("--past-latents must be >= 1")
+    if raw and (not args.state or args.prompt is None):
+        ap.error("input B needs --state and --prompt")
+    if args.past_latents is None:
+        args.past_latents = 1 if args.images and not args.past_frames else 3
+    if raw and args.past_latents > 1 and not (args.past_frames and args.past_actions):
+        ap.error("--past-latents > 1 needs --past-frames and --past-actions (or pass --past-latents 1)")
     return args
 
 
-def _abs(p: str) -> str:
-    return os.path.abspath(os.path.expanduser(p)) if p else p
+def pose6_to_mat(p: np.ndarray) -> np.ndarray:
+    """[..., 6] DROID pose (x, y, z, roll, pitch, yaw; extrinsic xyz Euler) -> [..., 4, 4]."""
+    p = np.asarray(p, np.float64)
+    a, b, c = p[..., 3], p[..., 4], p[..., 5]
+    ca, sa, cb, sb, cc, sc = np.cos(a), np.sin(a), np.cos(b), np.sin(b), np.cos(c), np.sin(c)
+    M = np.zeros(p.shape[:-1] + (4, 4), np.float64)
+    M[..., 0, 0], M[..., 0, 1], M[..., 0, 2] = cc * cb, cc * sb * sa - sc * ca, cc * sb * ca + sc * sa
+    M[..., 1, 0], M[..., 1, 1], M[..., 1, 2] = sc * cb, sc * sb * sa + cc * ca, sc * sb * ca - cc * sa
+    M[..., 2, 0], M[..., 2, 1], M[..., 2, 2] = -sb, cb * sa, cb * ca
+    M[..., :3, 3] = p[..., :3]
+    M[..., 3, 3] = 1.0
+    return M
 
 
-def _hydra_str(value: str) -> str:
-    if "'" in value or "\\" in value:
-        raise ValueError(f"unsupported character in {value!r}")
-    return f"'{value}'"
+class DroidVP:
+    """Read-only access to DROID-VP: episode index, raw 8D joint actions / states, the JPEG frame caches and, when
+    present, the camera calibration and end-effector poses (``tables/droid/cameras.npz``, ``cartesian_states.npy``)."""
+
+    def __init__(self, root: str):
+        self.root = Path(root)
+        c = self.root / "tables" / "droid"
+        if not (c / "episodes.npz").is_file():
+            raise FileNotFoundError(f"{c}/episodes.npz not found: --data-root must be a DROID-VP download")
+        self.meta = json.loads((c / "meta.json").read_text())
+        self.tasks: list[str] = json.loads((c / "tasks.json").read_text())
+        self.ep = dict(np.load(c / "episodes.npz"))
+        self.actions = np.load(c / "joint_actions.npy", mmap_mode="r")
+        self.states = np.load(c / "joint_states.npy", mmap_mode="r")
+        self.cams: list[str] = list(self.meta["camera_keys"])
+        self.fps = float(self.meta["fps"])
+        self._files: dict[tuple[int, int, int], tuple[np.ndarray, io.BufferedReader]] = {}
+        self.has_cameras = (c / "cameras.npz").is_file() and (c / "cartesian_states.npy").is_file()
+        if self.has_cameras:
+            self.camz = dict(np.load(c / "cameras.npz"))
+            self.cartesian = np.load(c / "cartesian_states.npy", mmap_mode="r")
+
+    def cameras(self, row: int, frames) -> tuple:
+        """(Ks [3, 3] pixel intrinsics at the stored frame size, w2cs [T, 4, 4] per frame) per view. The exterior
+        cameras are static; the wrist camera follows the end effector: eef(t) @ inv(eef(0)) @ c2w(frame 0)."""
+        f = np.clip(np.asarray(frames, np.int64), 0, self.length(row) - 1)
+        r0 = int(self.ep["row_start"][row])
+        kw, kh = (int(v) for v in self.camz["intrinsics_wh"])
+        Ks, w2cs = [], []
+        for j, cam in enumerate(self.cams):
+            h, w = self.meta["camera_hw"][cam]
+            fx, fy, cx, cy = self.camz["intrinsics_hd"][row, j]
+            Ks.append(np.array([[fx * w / kw, 0.0, cx * w / kw], [0.0, fy * h / kh, cy * h / kh], [0.0, 0.0, 1.0]]))
+            c2w = np.repeat(pose6_to_mat(self.camz["extrinsics6"][row, j])[None], len(f), axis=0)
+            if any(k in cam for k in ("wrist", "gripper", "hand")):
+                ee = pose6_to_mat(np.asarray(self.cartesian[r0 + f]))
+                c2w = ee @ (np.linalg.inv(pose6_to_mat(np.asarray(self.cartesian[r0]))) @ c2w[0])
+            w2cs.append(np.linalg.inv(c2w))
+        return Ks, w2cs
+
+    def usable_rows(self) -> np.ndarray:
+        """Episodes the training run sampled from (kept, instructed, all views cached, a non-idle range >= 17 frames)."""
+        e = self.ep
+        ok = e["keep"] & np.array([bool(t and t.strip()) for t in self.tasks]) & e["cam_ok"].all(1)
+        good = (e["range_end"] - e["range_start"]) >= CHUNK + 1
+        long_enough = np.zeros_like(ok)
+        long_enough[e["range_ep"][good]] = True
+        return np.flatnonzero(ok & long_enough)
+
+    def nonidle_ranges(self, row: int) -> list[tuple[int, int]]:
+        m = self.ep["range_ep"] == row
+        return list(zip(self.ep["range_start"][m].tolist(), self.ep["range_end"][m].tolist()))
+
+    def length(self, row: int) -> int:
+        return int(self.ep["length"][row])
+
+    def rows(self, table: np.ndarray, row: int, frames) -> np.ndarray:
+        """Rows of ``table`` at episode-relative ``frames`` (clamped into the episode)."""
+        ids = np.clip(np.asarray(frames, np.int64), 0, self.length(row) - 1) + int(self.ep["row_start"][row])
+        return np.asarray(table[ids], np.float32)
+
+    def frames(self, row: int, cam: int, frames) -> np.ndarray:
+        """uint8 [n, H, W, 3] RGB frames of camera ``cam`` at episode-relative ``frames`` (clamped)."""
+        from PIL import Image
+
+        e = self.ep
+        if not e["cam_ok"][row, cam]:
+            raise ValueError(f"episode row {row}: camera {self.cams[cam]} is not in DROID-VP")
+        key = (cam, int(e["cam_chunk"][row, cam]), int(e["cam_file"][row, cam]))
+        if key not in self._files:
+            d = (self.root / "lerobot" / "droid_1.0.1" / "videos" / self.cams[cam] / f"chunk-{key[1]:03d}"
+                 / f"file-{key[2]:03d}.framecache")
+            self._files[key] = (np.load(d / "index.npy", mmap_mode="r"), open(d / "frames.bin", "rb"))
+        index, fh = self._files[key]
+        base, L = int(e["cam_base"][row, cam]), self.length(row)
+        out = []
+        for f in frames:
+            off, n = (int(x) for x in index[base + max(0, min(L - 1, int(f)))])
+            fh.seek(off)
+            out.append(np.asarray(Image.open(io.BytesIO(fh.read(n))).convert("RGB")))
+        return np.stack(out)
 
 
-def load_config(toml_path: str, vae_path: str, extra: list[str]):
-    """The stage-3 experiment config with the inference overrides (no EMA copy, no warm start)."""
-    from cosmos_framework.configs.toml_config.sft_config import load_experiment_from_toml
-
-    overrides = [
-        "model.config.ema.enabled=false",
-        "model.config.rectified_flow_training_config.tracking_corr_weight=0.0",
-        f"model.config.tokenizer.vae_path={_hydra_str(vae_path)}",
-        "checkpoint.load_path=''",
-        *extra,
-    ]
-    return load_experiment_from_toml(toml_path, extra_overrides=overrides)
-
-
-def build_dataset(config, slot: str = "droid"):
-    """The training dataset of ``slot`` without metadata and without caption dropout."""
-    from omegaconf import open_dict
-
+def build_tokenizer(config):
+    """The Qwen3-VL text tokenizer of the training data pipeline (with the VPM special tokens)."""
+    from cosmos_framework.data.vfm.sequence_packing import add_special_tokens
     from cosmos_framework.utils.lazy_config import instantiate
 
-    node = copy.deepcopy(config.dataloader_train.dataloader.datasets[slot].dataset)
-    with open_dict(node):
-        node.jsonl_paths = []
-        node.cfg_dropout_rate = 0.0
-        node.min_window_frames = 1
-    ds = instantiate(node)
-    cc = getattr(ds, "conditioning_config", None)
-    if isinstance(cc, dict) and any(isinstance(k, str) for k in cc):
-        ds.conditioning_config = {int(k): v for k, v in cc.items()}
-    ds.s3_client = None
-    return ds
+    node = config.dataloader_train.dataloader.datasets["droid"].dataset.tokenizer_config
+    tokenizer = instantiate(node).tokenizer
+    return add_special_tokens(tokenizer)[0]
 
 
-def window_geometry(ds, p_lat: int) -> tuple[int, int]:
-    """(p_px, T): pixel frames of the clean past and of the whole window."""
-    tcf = int(ds.temporal_compression_factor)
-    chunk = int(ds._mvt_get("_mvt_action_chunk", 32))
-    p_px = tcf * (p_lat - 1) + 1
-    return p_px, p_px + chunk
+def make_caption(prompt: str) -> str:
+    """The training caption: the instruction as a sentence plus the viewpoint note ('' stays unconditional)."""
+    caption = prompt.strip()
+    if not caption:
+        return ""
+    caption = caption[0].upper() + caption[1:]
+    return f"{caption.rstrip('.')}. {VIEWPOINT_NOTE}"
 
 
-def resize_crop(width: int, height: int, out_w: int, out_h: int) -> dict:
-    """Resize to cover the output size, then center crop (the data loader's geometry)."""
-    r = max(out_w / width, out_h / height)
-    rh, rw = round(height * r), round(width * r)
-    return dict(ratio=r, input_hw=(height, width), resize_hw=(rh, rw),
-                crop_yx=(round((rh - out_h) / 2), round((rw - out_w) / 2)), output_hw=(out_h, out_w))
+def geometry(H: int, W: int) -> dict:
+    """Cover resize of an ``H x W`` image to the model size, then center crop (the training data pipeline)."""
+    tw, th = VIDEO_RES_SIZE_INFO[RESOLUTION][get_aspect_ratio(W, H)]
+    ratio = max(tw / W, th / H)
+    rh, rw = max(th, int(round(H * ratio))), max(tw, int(round(W * ratio)))
+    return dict(input_hw=(H, W), resize_hw=(rh, rw), crop_yx=((rh - th) // 2, (rw - tw) // 2), output_hw=(th, tw))
 
 
-def to_batch(sample: dict, device: "str | None") -> dict:
-    """Collate one sample like the training loader, with ``image_size`` flat per vision item."""
-    batch = custom_collate_fn([sample])
-    batch["image_size"] = [
-        torch.tensor([v.shape[-2], v.shape[-1], v.shape[-2], v.shape[-1]], dtype=torch.float32)
-        for views in batch["video"] for v in views
-    ]
-    return misc.to(batch, device=device) if device else batch
+def process_frames(frames: np.ndarray) -> torch.Tensor:
+    """uint8 [n, H, W, 3] -> float [3, n, 192, 320] in [-1, 1]: cover resize (bilinear, antialiased) + center crop."""
+    geo = geometry(*frames.shape[1:3])
+    (rh, rw), (y0, x0), (th, tw) = geo["resize_hw"], geo["crop_yx"], geo["output_hw"]
+    x = torch.from_numpy(np.ascontiguousarray(frames)).permute(0, 3, 1, 2).float().div_(255.0)
+    x = F.interpolate(x, size=(rh, rw), mode="bilinear", align_corners=False, antialias=True)
+    x = x[:, :, y0 : y0 + th, x0 : x0 + tw].permute(1, 0, 2, 3)
+    return x.mul_(2.0).sub_(1.0).contiguous()
 
 
-def _hide_future(sample: dict, p_px: int) -> None:
-    """Zero every frame and action row after the clean past, so only the observation reaches the model."""
-    sample["video"] = [v.clone() for v in sample["video"]]
-    for v in sample["video"]:
-        v[:, p_px:] = 0.0
-    act = sample["action"].clone()
-    act[1:] = 0.0
-    sample["action"] = act
+def normalized_intrinsics(K: np.ndarray, geo: dict) -> np.ndarray:
+    """Pixel K at the input size -> K of the model frame, normalized by its width / height."""
+    (H, W), (rh, rw), (y0, x0), (th, tw) = geo["input_hw"], geo["resize_hw"], geo["crop_yx"], geo["output_hw"]
+    sx, sy = rw / W, rh / H
+    Kn = np.zeros((3, 3), np.float32)
+    Kn[0, 0], Kn[0, 2] = K[0, 0] * sx / tw, (K[0, 2] * sx - x0) / tw
+    Kn[1, 1], Kn[1, 2] = K[1, 1] * sy / th, (K[1, 2] * sy - y0) / th
+    Kn[2, 2] = 1.0
+    return Kn
 
 
-def find_episode(jsonl: Path, data_root: str, episode: str) -> dict:
-    """Loader metadata of ``episode`` (scene name or uuid); videos are read from ``<data_root>/videos``."""
-    with open(jsonl) as fh:
-        for line in fh:
-            if not line.strip():
-                continue
-            rec = json.loads(line)
-            vp = rec["vision_path"]
-            scene = Path(vp).stem.rsplit("__", 1)[0]
-            if episode not in (scene, rec.get("uuid")):
-                continue
-            local = Path(data_root) / "videos" / Path(vp).name
-            if local.is_file():
-                vp = str(local)
-            elif "://" not in vp and not os.path.isabs(vp):
-                vp = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(jsonl)), vp))
-            return {
-                "uuid": rec["uuid"],
-                "vision_path": vp,
-                "width": rec["width"],
-                "height": rec["height"],
-                "aspect_ratio": get_aspect_ratio(rec["width"], rec["height"]),
-                "t2w_windows": rec.get("t2w_windows") or [],
-            }
-    raise FileNotFoundError(f"episode {episode!r} not found in {jsonl}")
+def build_sample(tokenizer, past: list[np.ndarray], state: np.ndarray, past_actions: np.ndarray, prompt: str,
+                 p_lat: int, fps: float = DROID_FPS, name: str = "sample", cameras: "tuple | None" = None) -> dict:
+    """The training sample of one window with the future hidden.
 
-
-def episode_sample(ds, md: dict, t0: int, p_lat: int, prompt: "str | None", seed: int = 0) -> tuple[dict, dict]:
-    """The training sample of the window whose clean past ends at episode frame ``t0``, future hidden."""
-    anchor = Path(os.path.abspath(md["vision_path"]))
-    scene, anchor_view = anchor.stem.rsplit("__", 1)
-    with np.load(anchor.parents[1] / "actions" / f"{scene}.npz") as z:
-        joint_states = z["joint_states"].astype(np.float32)
-    n = int(joint_states.shape[0])
-    p_px, T = window_geometry(ds, p_lat)
-    start = t0 - p_px + 1
-    if start < 0 or start + T > n:
-        raise ValueError(f"{scene}: --frame {t0} out of range; with --past-latents {p_lat} it must lie in "
-                         f"[{p_px - 1}, {n - T + p_px - 1}] ({n} frames)")
-    win0 = dict((md.get("t2w_windows") or [{}])[0])
-    caption = win0.get("qwen3_32b_rewrite-dense", win0.get("caption")) if prompt is None else (prompt or ".")
-    if caption is None:
-        raise ValueError(f"{scene}: no caption in the index; pass --prompt")
-    md = dict(md, window_start=start, t2w_windows=[{"start_frame": start, "end_frame": start + T - 1,
-                                                    "temporal_interval": 1, "caption": caption}])
-
-    saved_past = ds._mvt_get("_mvt_variable_past_latents", None)
-    saved_state = random.getstate()
-    ds._mvt_variable_past_latents = [int(p_lat)]
-    ds._mvt_rng_obj = random.Random(seed)
-    random.seed(seed)
-    try:
-        sample = ds.process_one_sample(md)
-    finally:
-        ds._mvt_variable_past_latents = saved_past
-        random.setstate(saved_state)
-    if sample is None:
-        raise RuntimeError(f"{scene}: the dataset rejected the window starting at frame {start} (see the log)")
-    if int(sample["frame_start"]) != start or int(sample["num_frames"]) != T:
-        raise RuntimeError(f"{scene}: window not pinned (start {sample['frame_start']} != {start} or "
-                           f"T {sample['num_frames']} != {T})")
-    if list(sample["sequence_plan"].condition_frame_indexes_vision) != list(range(p_lat)):
-        raise RuntimeError(f"{scene}: clean past not pinned to {p_lat} latents")
-    if prompt == "":
-        sample["ai_caption"] = ""
-        sample["text_token_ids"] = torch.tensor(ds._tokenize_caption("")[0])
-    _hide_future(sample, p_px)
-
-    out_w, out_h = ds.output_sizes[md["aspect_ratio"]]
-    info = {
-        "input": "episode",
-        "episode": scene,
-        "t0": int(t0),
-        "window_start": int(start),
-        "views": _episode_view_names(sample, anchor.parents[1] / "camera" / f"{scene}_cameras.json", anchor_view),
-        "state": joint_states[t0],
-        "fps": float(sample["fps"]),
-        "geometry": resize_crop(int(md["width"]), int(md["height"]), out_w, out_h),
-    }
-    return sample, info
-
-
-def _episode_view_names(sample: dict, cameras_json: Path, anchor_view: str) -> list[str]:
-    """View names of the sample, in sample order (anchor first), parsed from the dataset's ``__key__``."""
-    V = len(sample["video"])
-    views = sorted((k for k in json.loads(cameras_json.read_text()) if k != "optimization_summary"),
-                   key=len, reverse=True)
-    parts = str(sample.get("__key__", "")).split("__")
-    for i, part in enumerate(parts[:-1]):
-        if not re.fullmatch(r"\d+views_fut\d+", part):
-            continue
-        rest, names = parts[i + 1], []
-        while rest:
-            name = next((k for k in views if rest == k or rest.startswith(k + "_")), None)
-            if name is None:
-                break
-            names.append(name)
-            rest = rest[len(name) + 1:]
-        if len(names) == V and not rest:
-            return names
-    return [anchor_view] + [f"sibling{i}" for i in range(1, V)]
-
-
-def load_cameras(path: str, names: "list[str] | None") -> tuple[list[np.ndarray], list[np.ndarray], list[str]]:
-    """Per-view pixel K (3x3) and world-to-camera (4x4) from a cameras json."""
-    data = json.loads(Path(path).read_text())
-    views = {k: v for k, v in data.items()
-             if isinstance(v, dict) and ("intrinsics" in v or "measured_intrinsics" in v)}
-    names = names or list(views)
-    missing = [k for k in names if k not in views]
-    if missing:
-        raise KeyError(f"views {missing} not in {path} (has {list(views)})")
-    Ks = [np.asarray(views[k].get("intrinsics", views[k].get("measured_intrinsics")), np.float64) for k in names]
-    Es = [np.asarray(views[k].get("extrinsics", views[k].get("optimized_extrinsics")), np.float64) for k in names]
-    for k, K, E in zip(names, Ks, Es):
-        if K.shape != (3, 3) or E.shape != (4, 4):
-            raise ValueError(f"view {k}: expected a 3x3 intrinsics and a 4x4 extrinsics, got {K.shape}, {E.shape}")
-    return Ks, Es, names
-
-
-def load_frames(args, p_px: int) -> list[np.ndarray]:
-    """Per view uint8 [p_px, H, W, 3] ending at the last clean frame."""
-    from PIL import Image
-
-    if args.past_frames:
-        with np.load(args.past_frames) as z:
-            arr = z["frames"] if "frames" in z.files else z[z.files[0]]
-        frames = [np.asarray(v, np.uint8) for v in arr]
-    else:
-        frames = [np.asarray(Image.open(p).convert("RGB"), np.uint8)[None] for p in args.images.split(",")]
-    for f in frames:
-        if f.ndim != 4 or f.shape[-1] != 3:
-            raise ValueError(f"expected frames [P,H,W,3], got {f.shape}")
-        if f.shape[0] < p_px:
-            raise ValueError(f"--past-latents {args.past_latents} needs {p_px} past frames per view, got {f.shape[0]}")
-    return [f[-p_px:] for f in frames]
-
-
-def _resize_frames(frames: np.ndarray, geo: dict) -> np.ndarray:
-    from PIL import Image
-
-    (rh, rw), (cy, cx), (oh, ow) = geo["resize_hw"], geo["crop_yx"], geo["output_hw"]
-    return np.stack([np.asarray(Image.fromarray(f).resize((rw, rh), Image.BICUBIC))[cy:cy + oh, cx:cx + ow]
-                     for f in frames])
-
-
-def raw_sample(ds, frames: list[np.ndarray], Ks: list[np.ndarray], w2cs: list[np.ndarray], state: np.ndarray,
-               prompt: str, view_names: list[str], p_lat: int, fps: float = DROID_FPS,
-               name: str = "sample") -> tuple[dict, dict]:
-    """The DROID training sample contract built from raw arrays.
-
-    ``frames``: per view uint8 ``[p_px, H, W, 3]`` ending at the last clean frame. ``Ks``: 3x3 pixel intrinsics at
-    ``(W, H)``. ``w2cs``: 4x4 world-to-camera (metres). ``state``: ``[q0..q6, gripper]``, gripper 0 open .. 1 closed.
+    ``past``: per view uint8 ``[4 * (p_lat - 1) + 1, H, W, 3]`` ending at the current frame. ``state``: ``[8]`` at the
+    current frame. ``past_actions``: ``[4 * (p_lat - 1), 8]`` actions of the past frames. Joints in rad, gripper
+    0 open .. 1 closed (the model sees ``1 - g`` when ``GRIPPER_FLIP``). ``cameras``: optional (pixel Ks, world-to-camera
+    4x4s) per view at the input image size, for the point-track head; a w2c is one [4, 4] for every frame or [T, 4, 4].
     """
-    V = len(frames)
-    if not (len(Ks) == len(w2cs) == len(view_names) == V):
-        raise ValueError(f"{V} views of frames but {len(Ks)} cameras / {len(view_names)} names")
-    H, W = frames[0].shape[1:3]
-    if any(f.shape[1:3] != (H, W) for f in frames):
+    hist = 4 * (p_lat - 1)
+    p_px, T = hist + 1, hist + 1 + CHUNK
+    if len(past) != len(VIEWS):
+        raise ValueError(f"need {len(VIEWS)} views ({', '.join(VIEWS)}), got {len(past)}")
+    if any(f.ndim != 4 or f.shape[0] != p_px or f.shape[-1] != 3 for f in past):
+        raise ValueError(f"expected {p_px} past frames [H, W, 3] per view, got {[f.shape for f in past]}")
+    if any(f.shape[1:3] != past[0].shape[1:3] for f in past):
         raise ValueError("all views must share one image size")
-    p_px, T = window_geometry(ds, p_lat)
-    out_w, out_h = ds.output_sizes[get_aspect_ratio(W, H)]
-    geo = resize_crop(W, H, out_w, out_h)
-    r, (rh, rw), (cy, cx) = geo["ratio"], geo["resize_hw"], geo["crop_yx"]
-
     video = []
-    for f in frames:
-        clip = torch.zeros(3, T, out_h, out_w, dtype=torch.float32)
-        past = torch.from_numpy(np.ascontiguousarray(_resize_frames(f[-p_px:], geo))).permute(3, 0, 1, 2)
-        clip[:, :p_px] = past.float().div_(127.5).sub_(1.0)
-        video.append(clip)
+    for f in past:
+        clip = process_frames(f)
+        video.append(torch.cat([clip, clip.new_zeros(3, T - p_px, *clip.shape[2:])], dim=1))
+    th, tw = video[0].shape[-2:]
 
-    E = [np.repeat(np.asarray(e, np.float64)[None], T, axis=0) for e in w2cs]
-    camera = build_camera_bundle(
-        c2w_views=[np.linalg.inv(e) for e in E], intrinsics_views=[np.asarray(k, np.float64) for k in Ks],
-        native_sizes=[(H, W)] * V, unit_to_meters=1.0, input_height=H, input_width=W, resize_height=rh,
-        resize_width=rw, crop_y=cy, crop_x=cx, output_height=out_h, output_width=out_w,
-    )
-    Kn = np.zeros((V, 3, 3), np.float32)
-    for i, k in enumerate(Ks):
-        Kn[i, 0, 0] = k[0, 0] * r / out_w
-        Kn[i, 1, 1] = k[1, 1] * r / out_h
-        Kn[i, 0, 2] = (k[0, 2] * r - cx) / out_w
-        Kn[i, 1, 2] = (k[1, 2] * r - cy) / out_h
-        Kn[i, 2, 2] = 1.0
+    caption = make_caption(prompt)
+    from cosmos_framework.model.vfm.vlm.qwen3_vl.utils import tokenize_caption
 
-    caption = ""
-    if prompt:
-        caption = prompt.strip().rstrip(".") + "."
-        if ds.caption_suffix:
-            caption = f"{caption} {ds.caption_suffix}"
-    cond_fps = float(fps) if float(ds.conditioning_fps) < 0 else float(ds.conditioning_fps)
-    if caption and (ds.append_duration_fps_timestamps or ds.append_resolution_info):
-        from cosmos_framework.data.vfm.local_datasets.sft_dataset import _DURATION_TEMPLATE, _RESOLUTION_TEMPLATE
+    text_ids = tokenize_caption(caption, tokenizer, is_video=True, use_system_prompt=False)[:MAX_TEXT_TOKENS]
 
-        if ds.append_duration_fps_timestamps:
-            caption += " " + _DURATION_TEMPLATE.format(duration=T / cond_fps, fps=cond_fps)
-        if ds.append_resolution_info:
-            caption += " " + _RESOLUTION_TEMPLATE.format(height=out_h, width=out_w)
-        caption = caption.strip()
-    text_ids, caption = ds._tokenize_caption(caption)
-
-    rows = np.zeros((1 + T - p_px, STATE_DIM), np.float32)
+    rows = np.zeros((1 + hist + CHUNK, STATE_DIM), np.float32)
     rows[0] = np.asarray(state, np.float32)
-    if ds._mvt_get("_mvt_gripper_flip", True):
-        rows[0, -1] = 1.0 - rows[0, -1]
-    image_size = torch.tensor([out_h, out_w, out_h, out_w], dtype=torch.float32)
-
-    sample = {
-        "__key__": name,
-        "__url__": "",
-        "fps": float(fps),
-        "n_orig_video_frames": T,
-        "chunk_index": 0,
-        "frame_start": 0,
-        "frame_end": T - 1,
-        "num_frames": T,
-        "video": video,
-        "num_multiplier": 1,
-        "conditioning_fps": cond_fps,
-        "padding_mask": torch.zeros((1, out_h, out_w), dtype=torch.float32),
-        "image_size": [image_size] * V,
-        "ai_caption": caption,
-        "sampled_caption_style": "caption",
-        "text_token_ids": torch.tensor(text_ids),
-        "track_intrinsics": torch.from_numpy(Kn),
-        "track_extrinsics": torch.from_numpy(np.stack([e.astype(np.float32) for e in E])),
-        "action": pad_action_to_max_dim(torch.from_numpy(rows), int(ds._mvt_get("_mvt_max_action_dim", 64))),
-        "domain_id": torch.tensor(get_domain_id(DROID_DOMAIN), dtype=torch.long),
-        "raw_action_dim": torch.tensor(STATE_DIM, dtype=torch.long),
-        "mode": "policy",
-        "sequence_plan": SequencePlan(
+    rows[1 : 1 + hist] = np.asarray(past_actions, np.float32).reshape(hist, STATE_DIM)
+    if GRIPPER_FLIP:
+        rows[: 1 + hist, -1] = 1.0 - rows[: 1 + hist, -1]
+    image_size = torch.tensor([th, tw, th, tw], dtype=torch.float32)
+    extra = {}
+    if cameras is not None:
+        geo = geometry(*past[0].shape[1:3])
+        Ks, w2cs = cameras
+        extra = dict(
+            track_intrinsics=torch.from_numpy(np.stack([normalized_intrinsics(K, geo) for K in Ks])),
+            track_extrinsics=torch.from_numpy(np.stack([
+                np.asarray(E, np.float32) if np.ndim(E) == 3 else np.repeat(np.asarray(E, np.float32)[None], T, axis=0)
+                for E in w2cs])),
+        )
+    return dict(
+        **extra,
+        __key__=name,
+        __url__="",
+        dataset_name="droid",
+        fps=float(fps),
+        conditioning_fps=float(fps),
+        num_frames=T,
+        video=video,
+        image_size=[image_size] * len(video),
+        padding_mask=torch.zeros((1, th, tw), dtype=torch.float32),
+        ai_caption=caption,
+        text_token_ids=torch.tensor(text_ids, dtype=torch.long),
+        action=pad_action_to_max_dim(torch.from_numpy(rows), MAX_ACTION_DIM),
+        domain_id=torch.tensor(get_domain_id(DROID_DOMAIN), dtype=torch.long),
+        raw_action_dim=torch.tensor(STATE_DIM, dtype=torch.long),
+        mode="policy",
+        sequence_plan=SequencePlan(
             has_text=True,
             has_vision=True,
             condition_frame_indexes_vision=list(range(p_lat)),
             num_source_views=0,
             has_action=True,
-            condition_frame_indexes_action=[0],
-            action_start_frame_offset=p_px - 1,
+            condition_frame_indexes_action=list(range(1 + hist)),
+            action_start_frame_offset=0,
             action_single_stream=True,
             action_view_index=0,
         ),
-        **camera,
+    )
+
+
+def episode_input(data: DroidVP, row: int, t0: "int | None", p_lat: int, prompt: "str | None", tokenizer,
+                  cameras: "tuple | None" = None) -> tuple:
+    """(sample, info) of episode ``row`` with the current frame ``t0``; ``info`` carries the ground truth. Without
+    ``cameras`` the episode's own calibration is used when DROID-VP has it: true poses on the past frames and the
+    current pose held on the generated ones (as in training)."""
+    if not data.ep["cam_ok"][row].all():
+        raise ValueError(f"episode row {row} does not have all three cameras in DROID-VP")
+    L = data.length(row)
+    if t0 is None:
+        ranges = [r for r in data.nonidle_ranges(row) if r[1] - r[0] >= CHUNK + 1]
+        t0 = ranges[0][0] if ranges else 0
+    if not 0 <= t0 <= L - CHUNK - 1:
+        raise ValueError(f"episode row {row}: --frame {t0} out of range [0, {L - CHUNK - 1}] ({L} frames)")
+    hist = 4 * (p_lat - 1)
+    past_ids = list(range(t0 - hist, t0 + 1))
+    future_ids = list(range(t0 + 1, t0 + CHUNK + 1))
+    past = [data.frames(row, j, past_ids) for j in range(len(VIEWS))]
+    state = data.rows(data.states, row, [t0])[0]
+    past_actions = data.rows(data.actions, row, range(t0 - hist, t0))
+    instruction = data.tasks[row] if prompt is None else prompt
+    name = f"row{row}_t{t0}"
+    if cameras is None and data.has_cameras:
+        cameras = data.cameras(row, past_ids + [t0] * CHUNK)
+    sample = build_sample(tokenizer, past, state, past_actions, instruction, p_lat, fps=data.fps, name=name,
+                          cameras=cameras)
+    info = {
+        "geometry": geometry(*past[0].shape[1:3]),
+        "input": "episode",
+        "episode_row": int(row),
+        "episode_index": int(data.ep["episode_index"][row]),
+        "t0": int(t0),
+        "instruction": data.tasks[row],
+        "state": state,
+        "fps": data.fps,
+        "gt_actions": data.rows(data.actions, row, range(t0, t0 + CHUNK)),
+        "gt_future": [data.frames(row, j, future_ids) for j in range(len(VIEWS))],
+        "name": name,
     }
-    info = {"input": "raw", "views": list(view_names), "state": np.asarray(state, np.float32), "fps": float(fps),
-            "geometry": geo}
     return sample, info
 
 
-def raw_inputs(args, ds) -> tuple[dict, dict]:
-    p_px, _ = window_geometry(ds, args.past_latents)
-    names = [s for s in args.view_names.split(",") if s] or None
-    Ks, w2cs, names = load_cameras(args.cameras, names)
-    frames = load_frames(args, p_px)
-    if len(frames) != len(names):
-        raise ValueError(f"{len(frames)} views of frames but {len(names)} cameras {names}; use --view-names")
-    state = np.asarray([float(x) for x in args.state.split(",")], np.float64)
+def _load_array(path: str) -> np.ndarray:
+    if path.endswith(".npz"):
+        with np.load(path) as z:
+            return np.asarray(z[z.files[0]] if len(z.files) == 1 else z["frames" if "frames" in z.files else "actions"])
+    return np.load(path)
+
+
+def raw_input(args, tokenizer, cameras: "tuple | None" = None) -> tuple:
+    from PIL import Image
+
+    hist = 4 * (args.past_latents - 1)
+    if args.past_frames:
+        frames = [np.asarray(v, np.uint8) for v in _load_array(args.past_frames)]
+        if any(f.shape[0] < hist + 1 for f in frames):
+            raise ValueError(f"--past-latents {args.past_latents} needs {hist + 1} past frames per view")
+        frames = [f[-(hist + 1):] for f in frames]
+    else:
+        frames = [np.asarray(Image.open(p).convert("RGB"), np.uint8)[None] for p in args.images.split(",")]
+    state = np.asarray([float(x) for x in args.state.split(",")], np.float32)
     if state.shape != (STATE_DIM,):
         raise ValueError(f"--state needs {STATE_DIM} values (7 joints + gripper), got {state.size}")
-    return raw_sample(ds, frames, Ks, w2cs, state, args.prompt, names, args.past_latents, fps=args.fps,
-                      name=args.name)
+    past_actions = np.zeros((0, STATE_DIM), np.float32)
+    if hist:
+        past_actions = np.asarray(_load_array(args.past_actions), np.float32)
+        if past_actions.ndim != 2 or past_actions.shape[1] != STATE_DIM or past_actions.shape[0] < hist:
+            raise ValueError(f"--past-actions needs [{hist}, {STATE_DIM}], got {past_actions.shape}")
+        past_actions = past_actions[-hist:]
+    sample = build_sample(tokenizer, frames, state, past_actions, args.prompt, args.past_latents, name=args.name,
+                          cameras=cameras)
+    return sample, {"input": "raw", "state": state, "fps": DROID_FPS, "name": args.name,
+                    "geometry": geometry(*frames[0].shape[1:3])}
 
 
-def resolve_checkpoint(ckpt: str, revision: "str | None", rank: int) -> Path:
-    path = Path(ckpt).expanduser()
-    if path.exists():
-        return Path(os.path.abspath(path))
-    if ckpt.startswith("<"):
-        raise SystemExit(f"--ckpt {ckpt!r} is a placeholder: pass the released Hugging Face repo id or a local dir")
-    if ckpt.count("/") != 1:
-        raise FileNotFoundError(f"checkpoint {ckpt!r} is neither a local path nor a Hugging Face repo id")
-    from huggingface_hub import snapshot_download
-
-    from cosmos_framework.utils import distributed
-
-    if rank == 0:
-        snapshot_download(ckpt, revision=revision)
-    distributed.barrier()
-    return Path(snapshot_download(ckpt, revision=revision, local_files_only=rank != 0))
+def gripper_flip_for(choice: str, ckpt_dir: "Path | None") -> bool:
+    """True if the checkpoint keeps the gripper as ``1 - g`` (see ``GRIPPER_FLIP``)."""
+    if choice != "auto":
+        return choice == "flipped"
+    rel = None if ckpt_dir is None else ckpt_dir / "release.json"
+    if rel is not None and rel.is_file():
+        return json.loads(rel.read_text()).get("gripper", "flipped") != "droid"
+    return True
 
 
-def resolve_vae(vae_path: str, rank: int) -> str:
-    if vae_path:
-        return _abs(vae_path)
-    from huggingface_hub import hf_hub_download
-
-    from cosmos_framework.utils import distributed
-
-    if rank == 0:
-        hf_hub_download(WAN_VAE_REPO, WAN_VAE_FILE, revision=WAN_VAE_REVISION)
-    distributed.barrier()
-    return hf_hub_download(WAN_VAE_REPO, WAN_VAE_FILE, revision=WAN_VAE_REVISION, local_files_only=rank != 0)
+def check_checkpoint(ckpt_dir: Path) -> None:
+    """Refuse a VPM-DROID-old release: it carries the camera-conditioning weights and needs infer_droid_old.sh."""
+    for idx in (ckpt_dir / "model" / "model.safetensors.index.json", ckpt_dir / "model.safetensors.index.json"):
+        if idx.is_file():
+            keys = json.loads(idx.read_text())["weight_map"]
+            if any(k.startswith("net.camera_conditioner.") for k in keys):
+                raise SystemExit(f"{ckpt_dir} is a camera-conditioned VPM checkpoint (VPM-DROID-old layout); "
+                                 "run it with inference/infer_droid_old.sh")
+            return
 
 
-def storage_reader(ckpt_dir: Path):
-    """Safetensors release dir (``[model/]*.safetensors``) or a training checkpoint (``[iter_*/]model`` DCP)."""
-    from torch.distributed.checkpoint import FileSystemReader, HuggingFaceStorageReader
-
-    for d in (ckpt_dir / "model", ckpt_dir):
-        if d.is_dir() and any(d.glob("*.safetensors")):
-            return HuggingFaceStorageReader(str(d)), "safetensors"
-    for d in (ckpt_dir / "model", ckpt_dir):
-        if (d / ".metadata").is_file():
-            return FileSystemReader(str(d)), "dcp"
-    raise FileNotFoundError(f"no *.safetensors or DCP .metadata under {ckpt_dir} (or its model/)")
-
-
-def build_model(config, ckpt_dir: Path):
-    """Instantiate the model from the config and load the ``net.*`` weights strictly."""
-    import torch.distributed.checkpoint as dcp
-    from torch.distributed.checkpoint.state_dict import StateDictOptions, get_model_state_dict, set_model_state_dict
-
-    from cosmos_framework.utils.lazy_config import instantiate
-
-    model = instantiate(config.model).to("cuda")
-    model.eval()
-    state = get_model_state_dict(model)
-    stray = [k for k in state if not k.startswith("net.")]
-    if stray:
-        raise RuntimeError(f"unexpected model state keys (EMA must be disabled): {stray[:5]}")
-    reader, kind = storage_reader(ckpt_dir)
-    dcp.load(state, storage_reader=reader)
-    set_model_state_dict(model, state, options=StateDictOptions(strict=True))
-    return model, kind
-
-
-@torch.no_grad()
-def run_clip(model, batch: dict, p_lat: int, args) -> dict:
-    """Generate the future frames of every view and the action chunk; optionally track points on the result."""
-    tcf = int(model.tokenizer_vision_gen.temporal_compression_factor)
-    clips = model.nested_clips(batch)
-    T = int(clips[0][0].shape[1])
-    p_px = tcf * (p_lat - 1) + 1
-    cond = list(range(p_lat))
-    win = model.build_window_batch(batch, clips, 0, T, cond)
-    roll = model.generate_window(win, clips, p_px, T - p_px, T, args.num_steps, args.guidance, args.seed,
-                                 shift=float(args.shift))
-    action = (roll.get("action") or [None])[0]
-    if action is not None:
-        while action.dim() > 2:
-            action = action[0]
-    tracks = None
-    if args.tracks != "none":
-        db = model.build_window_batch(win, roll["pred"], 0, T, cond)
-        if action is not None:
-            rows = db["action"][0].clone()
-            k = min(rows.shape[0], action.shape[0])
-            rows[1:k] = action[1:k].to(device=rows.device, dtype=rows.dtype)
-            db["action"] = [rows]
-        torch.manual_seed(args.seed)
-        res = model.predict_tracks(db, grid_size=args.grid_size, seed=args.seed,
-                                   use_gt_queries=args.tracks == "dataset", sigma=float(args.track_sigma))
-        tracks = res[0] if res else None
-    return {
-        "pred": [v.detach().float().cpu() for v in roll["pred"][0]],
-        "action": None if action is None else action.detach().float().cpu(),
-        "tracks": tracks,
-        "p_px": p_px,
-    }
-
-
-def _u8(clip: torch.Tensor) -> np.ndarray:
-    """[3,T,H,W] in [-1,1] -> [T,H,W,3] uint8."""
-    return ((clip.clamp(-1, 1) + 1.0) * 127.5).round().to(torch.uint8).permute(1, 2, 3, 0).numpy()
-
-
-def _write_mp4(path: Path, frames: np.ndarray, fps: float) -> None:
-    from cosmos_framework.utils.easy_io import easy_io
-
-    easy_io.dump(frames, str(path), file_format="mp4", fps=float(fps), quality=8)
-
-
-def _np(x):
-    return None if x is None else (x.detach().float().cpu().numpy() if torch.is_tensor(x) else np.asarray(x))
-
-
-def _first(x):
-    while isinstance(x, (list, tuple)):
-        x = x[0]
-    return x
-
-
-def write_outputs(d: Path, res: dict, batch: dict, info: dict, meta: dict, fps: float, gripper_flip: bool) -> None:
+def write_outputs(d: Path, res: dict, batch: dict, info: dict, meta: dict, p_lat: int) -> None:
     (d / "video").mkdir(parents=True, exist_ok=True)
-    views = info["views"]
+    fps = info["fps"]
     frames = [_u8(v) for v in res["pred"]]
-    for name, f in zip(views, frames):
+    for name, f in zip(VIEWS, frames):
         _write_mp4(d / "video" / f"{name}.mp4", f, fps)
+    if "gt_future" in info:
+        for name, f, gt in zip(VIEWS, frames, info["gt_future"]):
+            p_px = res["p_px"]
+            gt_clip = _u8(process_frames(gt))
+            _write_mp4(d / "video" / f"{name}_gt.mp4", np.concatenate([f[:p_px], gt_clip]), fps)
 
+    hist = 4 * (p_lat - 1)
+    extra = {}
     if res["action"] is not None:
         rows = res["action"][:, :STATE_DIM].numpy().astype(np.float32)
-        actions = rows[1:].copy()
-        if gripper_flip:
-            actions[:, -1] = 1.0 - actions[:, -1]
-        actions[:, -1] = np.clip(actions[:, -1], 0.0, 1.0)
-        np.savez(d / "actions.npz", actions=actions, state=np.asarray(info["state"], np.float32), model_rows=rows,
-                 dt=np.float32(1.0 / fps))
+        actions = rows[1 + hist :].copy()
+        actions[:, -1] = np.clip(1.0 - actions[:, -1] if GRIPPER_FLIP else actions[:, -1], 0.0, 1.0)
+        arrays = dict(actions=actions, state=np.asarray(info["state"], np.float32), model_rows=rows,
+                      dt=np.float32(1.0 / fps))
+        if "gt_actions" in info:
+            gt = np.asarray(info["gt_actions"], np.float32)
+            arrays["gt_actions"] = gt
+            extra = {"joint_mae_rad": float(np.abs(actions[:, :7] - gt[:, :7]).mean()),
+                     "gripper_mae": float(np.abs(actions[:, 7] - gt[:, 7]).mean())}
+        np.savez(d / "actions.npz", **arrays)
 
     tr = res.get("tracks")
     if tr is not None:
         uv = _np(tr["tracks"]).astype(np.float32)
         geo = info["geometry"]
-        (oh, ow), (cy, cx), r = geo["output_hw"], geo["crop_yx"], geo["ratio"]
+        (H, W), (rh, rw), (y0, x0), (th, tw) = geo["input_hw"], geo["resize_hw"], geo["crop_yx"], geo["output_hw"]
         out = {
             "tracks_px": uv,
-            "tracks_input_px": ((uv + np.array([cx, cy], np.float32)) / r).astype(np.float32),
+            "tracks_input_px": ((uv + np.array([x0, y0], np.float32)) * np.array([W / rw, H / rh], np.float32)),
             "sigma": np.float32(meta["track_sigma"]),
-            "views": np.array(views),
+            "views": np.array(VIEWS),
         }
         for key in ("vis", "conf", "depth"):
             if tr.get(key) is not None:
                 out[key] = _np(tr[key]).astype(np.float32)
-        if "depth" in out:
+        if "depth" in out and batch.get("track_intrinsics") is not None:
             Kn = _np(_first(batch["track_intrinsics"])).astype(np.float64)
             w2c = _np(_first(batch["track_extrinsics"])).astype(np.float64)[:, : uv.shape[1]]
-            uvn = uv / np.array([ow, oh], np.float64)
+            uvn = uv / np.array([tw, th], np.float64)
             pix = np.concatenate([uvn, np.ones_like(uvn[..., :1])], axis=-1)
             xc = np.einsum("vij,vtnj->vtni", np.linalg.inv(Kn), pix) * out["depth"][..., None]
             c2w = np.linalg.inv(w2c)
@@ -635,36 +553,22 @@ def write_outputs(d: Path, res: dict, batch: dict, info: dict, meta: dict, fps: 
         np.savez(d / "tracks.npz", **out)
         from cosmos_framework.model.vfm.tracking.viz import draw_tracks
 
-        for v, name in enumerate(views):
-            _write_mp4(d / "video" / f"{name}_tracks.mp4", draw_tracks(frames[v], uv[v]), fps)
+        for v, name in enumerate(VIEWS):
+            vis = out["vis"][v] > 0.5 if "vis" in out else None
+            _write_mp4(d / "video" / f"{name}_tracks.mp4", draw_tracks(frames[v], uv[v], visible=vis, trail=8, radius=2),
+                       fps)
 
-    meta = dict(meta, views=views, fps=fps, caption=_first(batch.get("ai_caption")), past_frames=res["p_px"],
-                generated_frames=int(frames[0].shape[0] - res["p_px"]),
-                geometry={k: (list(v) if isinstance(v, tuple) else v) for k, v in info["geometry"].items()})
-    for key in ("episode", "t0", "window_start"):
+    meta = dict(meta, **extra, views=VIEWS, fps=fps, past_frames=res["p_px"],
+                generated_frames=int(frames[0].shape[0] - res["p_px"]), state=np.asarray(info["state"]).tolist())
+    for key in ("input", "episode_row", "episode_index", "t0", "instruction"):
         if key in info:
             meta[key] = info[key]
-    meta["state"] = np.asarray(info["state"], np.float32).tolist()
     (d / "meta.json").write_text(json.dumps(meta, indent=1, default=str))
-
-
-def summarize(batch: dict) -> dict:
-    """Key -> shape/dtype (or value) of a collated batch, for --dry-run."""
-    def desc(x):
-        if torch.is_tensor(x):
-            return f"{tuple(x.shape)} {str(x.dtype).replace('torch.', '')}"
-        if isinstance(x, (list, tuple)):
-            return [desc(e) for e in x]
-        if isinstance(x, SequencePlan):
-            return {k: getattr(x, k) for k in ("condition_frame_indexes_vision", "condition_frame_indexes_action",
-                                                 "action_start_frame_offset", "action_single_stream")}
-        return x
-    return {k: desc(v) for k, v in sorted(batch.items())}
 
 
 def main(argv=None) -> None:
     args = parse_args(argv)
-    for key in ("vae_path", "data_root", "jsonl", "past_frames", "cameras", "out_dir"):
+    for key in ("vae_path", "data_root", "past_frames", "past_actions", "cameras", "out_dir"):
         setattr(args, key, _abs(getattr(args, key)))
     if args.images:
         args.images = ",".join(_abs(p) for p in args.images.split(","))
@@ -675,20 +579,29 @@ def main(argv=None) -> None:
         args.ckpt = _abs(args.ckpt)
     os.chdir(REPO_ROOT)
 
-    if args.episode:
-        episodes = [e for e in args.episode.split(",") if e]
-        frames = [int(f) for f in args.frame.split(",") if f != ""] or [4 * (args.past_latents - 1)]
-        if len(frames) == 1:
-            frames = frames * len(episodes)
-        if len(frames) != len(episodes):
-            raise SystemExit("--frame needs one value or one per --episode")
-        clips = list(zip(episodes, frames))
-        jsonl = Path(args.jsonl) if args.jsonl else Path(args.data_root) / "train" / "video_dataset_file.jsonl"
-    else:
-        clips, jsonl = [(None, None)], None
+    if args.list:
+        data = DroidVP(args.data_root)
+        for r in data.usable_rows()[: args.list]:
+            print(int(r), data.length(int(r)), data.nonidle_ranges(int(r))[0], data.tasks[r])
+        return
 
+    data = None
+    if args.episode:
+        rows = [int(e) for e in args.episode.split(",") if e]
+        t0s = [int(f) for f in args.frame.split(",") if f != ""] or [None]
+        if len(t0s) == 1:
+            t0s = t0s * len(rows)
+        if len(t0s) != len(rows):
+            raise SystemExit("--frame needs one value or one per --episode")
+        clips = list(zip(rows, t0s))
+        data = DroidVP(args.data_root)
+    else:
+        clips = [(None, None)]
+
+    global GRIPPER_FLIP
     if args.dry_run:
         rank, world, vae = 0, 1, args.vae_path or "unused"
+        GRIPPER_FLIP = gripper_flip_for(args.gripper, Path(args.ckpt) if Path(args.ckpt).exists() else None)
     else:
         from cosmos_framework.utils import distributed
 
@@ -696,28 +609,31 @@ def main(argv=None) -> None:
         rank, world = distributed.get_rank(), distributed.get_world_size()
         vae = resolve_vae(args.vae_path, rank)
         ckpt_dir = resolve_checkpoint(args.ckpt, args.revision, rank)
+        check_checkpoint(ckpt_dir)
+        GRIPPER_FLIP = gripper_flip_for(args.gripper, ckpt_dir)
+        log.info(f"[droid] gripper inside the model: {'1 - g' if GRIPPER_FLIP else 'DROID (0 open .. 1 closed)'}")
 
-    config = load_config(args.toml, vae, list(args.override))
-    ds = build_dataset(config)
-    gripper_flip = bool(ds._mvt_get("_mvt_gripper_flip", True))
+    config = load_config(args.toml, vae, MODEL_OVERRIDES + list(args.override))
+    tokenizer = build_tokenizer(config)
     device = None if args.dry_run else "cuda"
+    cameras = None
+    if args.cameras:
+        Ks, w2cs, _ = load_cameras(args.cameras, VIEWS)
+        cameras = (Ks, w2cs)
 
     def make(clip):
-        episode, t0 = clip
-        if episode is None:
-            sample, info = raw_inputs(args, ds)
-            name = args.name
+        row, t0 = clip
+        if row is None:
+            sample, info = raw_input(args, tokenizer, cameras)
         else:
-            md = find_episode(jsonl, args.data_root, episode)
-            sample, info = episode_sample(ds, md, t0, args.past_latents, args.prompt, seed=args.seed)
-            name = f"{info['episode']}_t{t0}"
-        return to_batch(sample, device), info, name
+            sample, info = episode_input(data, row, t0, args.past_latents, args.prompt, tokenizer, cameras)
+        return to_batch(sample, device), info
 
     if args.dry_run:
         for clip in clips:
-            batch, info, name = make(clip)
-            print(json.dumps({"name": name, "views": info["views"], "geometry": info["geometry"],
-                              "batch": summarize(batch)}, indent=1, default=str))
+            batch, info = make(clip)
+            print(json.dumps({"name": info["name"], "caption": batch["ai_caption"], "batch": summarize(batch)},
+                             indent=1, default=str))
         return
 
     t_load = time.time()
@@ -727,9 +643,9 @@ def main(argv=None) -> None:
     base_meta = {
         "checkpoint": args.ckpt, "checkpoint_format": kind, "revision": args.revision, "seed": args.seed,
         "num_steps": args.num_steps, "guidance": args.guidance, "shift": args.shift,
-        "past_latents": args.past_latents, "gripper_flip": gripper_flip,
-        "tracks": args.tracks, "grid_size": args.grid_size, "track_sigma": args.track_sigma,
-        "num_gpus": world,
+        "past_latents": args.past_latents, "num_gpus": world,
+        "tracks": args.tracks, "grid_size": args.grid_size, "track_sigma": args.track_sigma, "cameras": bool(cameras),
+        "gripper_in_model": "1 - g" if GRIPPER_FLIP else "droid",
     }
     stand_in = None
     for rnd in range((len(clips) + world - 1) // world):
@@ -746,7 +662,7 @@ def main(argv=None) -> None:
             if stand_in is None:
                 stand_in = make(clips[0])
             built = stand_in
-        batch, info, name = built
+        batch, info = built
         torch.cuda.reset_peak_memory_stats()
         t_start = time.time()
         res = run_clip(model, batch, args.past_latents, args)
@@ -754,12 +670,12 @@ def main(argv=None) -> None:
         seconds = time.time() - t_start
         if not real:
             continue
-        d = out_root / name
-        meta = dict(base_meta, seconds=round(seconds, 1),
+        d = out_root / info["name"]
+        meta = dict(base_meta, caption=batch["ai_caption"][0], seconds=round(seconds, 1),
                     max_memory_allocated_gb=round(torch.cuda.max_memory_allocated() / 1e9, 2),
                     max_memory_reserved_gb=round(torch.cuda.max_memory_reserved() / 1e9, 2))
-        write_outputs(d, res, batch, info, meta, info["fps"], gripper_flip)
-        log.info(f"[droid] rank {rank}: {name} -> {d} ({seconds:.0f}s)", rank0_only=False)
+        write_outputs(d, res, batch, info, meta, args.past_latents)
+        log.info(f"[droid] rank {rank}: {info['name']} -> {d} ({seconds:.0f}s)", rank0_only=False)
 
     import torch.distributed as dist
 

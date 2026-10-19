@@ -2,24 +2,21 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: OpenMDW-1.1
 #
-# DROID inference with VPM-DROID-v2 (torchrun wrapper of inference/inference_droid_v2.py).
+# DROID inference with VPM-DROID-old or a checkpoint of this repository's stage-3 recipe (torchrun wrapper of
+# inference/inference_droid_old.py). VPM-DROID (three cameras) uses inference/infer_droid.sh.
 #
-#   # an episode of DROID-Raw (current frame 40; default: the start of its first non-idle range)
-#   bash inference/infer_droid_v2.sh --episode 42 --frame 40
-#   # raw arrays: the last 9 frames of the three cameras and the 8 actions between them
-#   bash inference/infer_droid_v2.sh --past-frames past.npz --past-actions past_actions.npy \
+#   # an episode in the VPM data layout (clean past ends at frame 120), with point tracks
+#   bash inference/infer_droid_old.sh --episode <scene> --frame 120 --tracks grid
+#   # raw arrays
+#   bash inference/infer_droid_old.sh --images view1.png,view2.png --cameras cameras.json \
 #       --state q0,q1,q2,q3,q4,q5,q6,gripper --prompt "put the marker in the cup"
-#   # the current frame only (less accurate actions)
-#   bash inference/infer_droid_v2.sh --images ext1.png,ext2.png,wrist.png --state ... --prompt "..."
-#   # point tracks on the generated clip (experimental), lifted to 3D with a calibration json
-#   bash inference/infer_droid_v2.sh --episode 42 --frame 40 --tracks grid --cameras cameras.json
 #
-# All arguments go to inference/inference_droid_v2.py (see --help); relative paths in them are resolved against the
+# All arguments go to inference/inference_droid_old.py (see --help); relative paths in them are resolved against the
 # current directory, relative paths in the environment variables against the repository root. Environment:
-#   VPM_CHECKPOINT   release dir, training iter_* dir or Hugging Face repo id (default: rooty2020/VPM-DROID-v2)
-#   VPM_DATA_ROOT    dataset root; episodes are read from $VPM_DATA_ROOT/DROID-Raw (default: data)
+#   VPM_CHECKPOINT   release dir, training iter_* dir or Hugging Face repo id (default: rooty2020/VPM-DROID-old)
+#   VPM_DATA_ROOT    dataset root; episodes are read from $VPM_DATA_ROOT/droid (default: data)
 #   WAN_VAE_PATH     Wan2.2 VAE weights (default: checkpoints/wan22_vae/Wan2.2_VAE.pth, else downloaded)
-#   OUTPUT_ROOT      outputs go to $OUTPUT_ROOT/droid_v2_inference/<sample> (default: outputs)
+#   OUTPUT_ROOT      outputs go to $OUTPUT_ROOT/droid_old_inference/<sample> (default: outputs)
 #   NPROC_PER_NODE   GPUs; the model is sharded over them and episodes run one per GPU (default: 1)
 #   HF_HOME          Hugging Face cache (Qwen3-VL tokenizer, downloaded checkpoint and VAE)
 #   VPM_PYTHON       interpreter (default: $VIRTUAL_ENV/bin/python, else .venv/bin/python, else python)
@@ -28,7 +25,7 @@ set -euo pipefail
 # shellcheck source=training/_launch_common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/../training/_launch_common.sh"
 
-: "${VPM_CHECKPOINT:=rooty2020/VPM-DROID-v2}"
+: "${VPM_CHECKPOINT:=rooty2020/VPM-DROID-old}"
 : "${VPM_DATA_ROOT:=data}"
 : "${OUTPUT_ROOT:=outputs}"
 : "${NPROC_PER_NODE:=1}"
@@ -66,6 +63,12 @@ for cu_lib in "$venv_dir"/lib/python3*/site-packages/nvidia/cu13/lib; do
     break
 done
 
-vpm_log "DROID-v2 inference: checkpoint $VPM_CHECKPOINT, $NPROC_PER_NODE GPU(s), output $OUTPUT_ROOT/droid_v2_inference"
+if [[ " $* " == *" --episode "* || " $* " == *" --episode="* ]]; then
+    for tool in ffmpeg ffprobe; do
+        command -v "$tool" >/dev/null 2>&1 || vpm_die "$tool not on PATH (needed to decode the episode videos)"
+    done
+fi
+
+vpm_log "DROID-old inference: checkpoint $VPM_CHECKPOINT, $NPROC_PER_NODE GPU(s), output $OUTPUT_ROOT/droid_old_inference"
 exec "$python" -m torch.distributed.run --standalone --nnodes=1 --nproc_per_node="$NPROC_PER_NODE" \
-    "$VPM_ROOT/inference/inference_droid_v2.py" --ckpt "$VPM_CHECKPOINT" "$@"
+    "$VPM_ROOT/inference/inference_droid_old.py" --ckpt "$VPM_CHECKPOINT" "$@"

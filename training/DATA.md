@@ -169,7 +169,7 @@ Every view that can be sampled needs both files, even if it has no points of its
 
 ## DROID robot actions (`actions/<scene>.npz`)
 
-Used by stage 3 (and by `inference/inference_droid.py` for episode inputs):
+Used by stage 3 (and by `inference/inference_droid_old.py` for episode inputs):
 
 | key | shape / dtype | meaning |
 |---|---|---|
@@ -177,7 +177,7 @@ Used by stage 3 (and by `inference/inference_droid.py` for episode inputs):
 | `joint_actions` | `[n, 8]` float32 | the joint-position action commanded at frame `t`: 7 joint targets (rad), then the gripper target |
 
 - The gripper is in `[0, 1]`, with **0 = open and 1 = closed** (the DROID convention). By default
-  (`gripper_flip=True`) the model sees `1 - g`. `inference/inference_droid.py` converts its outputs back to the
+  (`gripper_flip=True`) the model sees `1 - g`. `inference/inference_droid_old.py` converts its outputs back to the
   DROID convention.
 - Row `t` is video frame `t` (DROID videos run at 15 fps). Other keys in the file are ignored.
 - **Sample construction (stage 3).** The number of clean past latents `p` is drawn from

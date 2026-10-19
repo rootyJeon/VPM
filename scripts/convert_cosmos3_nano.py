@@ -23,11 +23,9 @@ import torch.distributed.checkpoint as dcp
 from safetensors import safe_open
 from torch.distributed.checkpoint import FileSystemWriter
 
-try:
-    from cosmos_framework.utils.vfm import diffusers_keys
-except ImportError:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from cosmos_framework.utils.vfm import diffusers_keys
+# This repository's cosmos_framework first, also when another copy of the package is installed in the environment.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from cosmos_framework.utils.vfm import diffusers_keys  # noqa: E402
 
 REPO_ID = "nvidia/Cosmos3-Nano"
 REVISION = "e59a53c25979a090fa8706c9acc0c254a6e89b92"

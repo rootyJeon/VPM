@@ -20,7 +20,7 @@
 #   CHECKPOINT_DIR     default: checkpoints
 #   VPM_DATA_ROOT      default: data
 #   HF_HOME, HF_TOKEN  Hugging Face cache and token (log in with `hf auth login` for gated repositories)
-#   VPM_RELEASE_REPO   Hugging Face repo of the released checkpoint (default: vpm-project/VPM-DROID)
+#   VPM_RELEASE_REPO   Hugging Face repo of the released checkpoint (default: rooty2020/VPM-DROID)
 #   VPM_DATA_REPO      Hugging Face dataset repo of the prepared data (default: vpm-project/VPM-Data)
 #   VPM_PYTHON         interpreter with the VPM environment (default: $VIRTUAL_ENV/bin/python, .venv/bin/python, python3)
 
@@ -36,7 +36,7 @@ WAN_VAE_REVISION="921dbaf3f1674a56f47e83fb80a34bac8a8f203e"
 TOKENIZER_REPO="Qwen/Qwen3-VL-8B-Instruct"
 ALL_SLOTS="psl4d,droid,hrdexdb,molmo"
 
-RELEASE_REPO="${VPM_RELEASE_REPO:-vpm-project/VPM-DROID}"
+RELEASE_REPO="${VPM_RELEASE_REPO:-rooty2020/VPM-DROID}"
 DATA_REPO="${VPM_DATA_REPO:-vpm-project/VPM-Data}"
 
 log() { echo ">>> $*"; }
@@ -98,6 +98,8 @@ if [[ -z "$PY" ]]; then
         PY="python3"
     fi
 fi
+# This repository's cosmos_framework first (as in the training and inference launchers).
+export PYTHONPATH="$VPM_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 "$PY" -c "import huggingface_hub" 2>/dev/null ||
     die "'$PY' cannot import huggingface_hub; install the environment first (README, Installation) or set VPM_PYTHON"
 
