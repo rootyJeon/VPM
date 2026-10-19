@@ -92,7 +92,6 @@ useful well beyond world modeling:
 | Point tracking, scene flow | tracks |
 | Human and object motion forecasting | tracks, camera |
 | Robot manipulation | tracks, caption |
-| Occlusion reasoning | tracks, depth |
 | Video understanding | video, caption, metadata |
 
 The files and their formats are described on the [<img src="docs/hf-logo.svg" alt="" height="14"> dataset card](https://huggingface.co/datasets/rooty2020/VPM-Data).
