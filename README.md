@@ -2,44 +2,22 @@
   <img src="docs/vpm-icon.svg" alt="VPM" width="120">
 </p>
 
-<h1 align="center">Learning the 4D World through Point Trajectory Forecasting</h1>
-
 <p align="center">
   <a href="https://rootyjeon.github.io/video-point-model/"><img src="https://img.shields.io/badge/Project-Page-1f6feb.svg?logo=googlechrome&logoColor=white" alt="Project page"></a>
   <a href="https://huggingface.co/datasets/rooty2020/VPM-Data"><img src="https://img.shields.io/badge/VPM--Data-Dataset-yellow?style=flat&logo=huggingface" alt="VPM-Data"></a>
   <a href="https://huggingface.co/datasets/rooty2020/VP-WorldBench"><img src="https://img.shields.io/badge/VP--WorldBench-Benchmark-yellow?style=flat&logo=huggingface" alt="VP-WorldBench"></a>
 </p>
 
-<div align="center">
-  <a href="https://rootyjeon.github.io/">Byungwoo&nbsp;Jeon</a><sup>1*</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://sunghwanhong.github.io/">Sunghwan&nbsp;Hong</a><sup>2*</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://openreview.net/profile?id=~Dohyeon_Kim5">Dohyeon&nbsp;Kim</a><sup>3</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://jhoonjwa.github.io/">Jonghoon&nbsp;Lee</a><sup>1</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://scholar.google.com/citations?user=k2e82kcAAAAJ&hl=en">Jungwoo&nbsp;Park</a><sup>1</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://blog.sulwon.com/">Inhee&nbsp;Lee</a><sup>3</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://pslab.ai/en/">Doosan&nbsp;Baek</a><sup>6</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://pslab.ai/en/">Jinil&nbsp;Kim</a><sup>6</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://pslab.ai/en/">Taehyun&nbsp;Lim</a><sup>6</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://jhugestar.github.io/">Hanbyul&nbsp;Joo</a><sup>3,5</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://people.inf.ethz.ch/pomarc/">Marc&nbsp;Pollefeys</a><sup>2</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://www.sainingxie.com/">Saining&nbsp;Xie</a><sup>4&dagger;</sup> &ensp;<b>&middot;</b>&ensp;
-  <a href="https://alinlab.kaist.ac.kr/shin.html">Jinwoo&nbsp;Shin</a><sup>1,5&dagger;</sup>
-  <br>
-  <br>
-  <sup>1</sup>KAIST &emsp; <sup>2</sup>ETH Zürich &emsp; <sup>3</sup>Seoul National University &emsp; <sup>4</sup>New York University &emsp; <sup>5</sup>RLWRLD &emsp; <sup>6</sup>Physics Sim Lab
-  <br>
-  <sup>*</sup>Equal Contribution &emsp; <sup>&dagger;</sup>Equal Advising &emsp;<br>
-</div>
+# Learning the 4D World through Point Trajectory Forecasting
 
-<h3 align="center">[<a href="https://rootyjeon.github.io/video-point-model/">project page</a>]</h3>
-
-<br>
-
-**Video-Point Model (VPM)** is a multi-view video world model built on [NVIDIA Cosmos3](https://huggingface.co/nvidia/Cosmos3-Nano).
-
-- 🎥 **Multi-view Video**: Generating synchronized videos from multi-cameras.
-- 📍 **3D Point Tracks**: Consistent 3D points across views, read from its own attention features.
-- 🦾 **Robot action**: Predicting a robot action chunk together with the future frames.
+> [Byungwoo Jeon](https://rootyjeon.github.io/)<sup>1\*</sup>, [Sunghwan Hong](https://sunghwanhong.github.io/)<sup>2\*</sup>, [Dohyeon Kim](https://openreview.net/profile?id=~Dohyeon_Kim5)<sup>3</sup>, [Jonghoon Lee](https://jhoonjwa.github.io/)<sup>1</sup>, [Jungwoo Park](https://scholar.google.com/citations?user=k2e82kcAAAAJ&hl=en)<sup>1</sup>, [Inhee Lee](https://blog.sulwon.com/)<sup>3</sup>, [Doosan Baek](https://pslab.ai/en/)<sup>6</sup>, [Jinil Kim](https://pslab.ai/en/)<sup>6</sup>, [Taehyun Lim](https://pslab.ai/en/)<sup>6</sup>, [Hanbyul Joo](https://jhugestar.github.io/)<sup>3,5</sup>, [Marc Pollefeys](https://people.inf.ethz.ch/pomarc/)<sup>2</sup>, [Saining Xie](https://www.sainingxie.com/)<sup>4†</sup>, [Jinwoo Shin](https://alinlab.kaist.ac.kr/shin.html)<sup>1,5†</sup>
+>
+> <sup>1</sup>KAIST, <sup>2</sup>ETH Zürich, <sup>3</sup>Seoul National University, <sup>4</sup>New York University, <sup>5</sup>RLWRLD, <sup>6</sup>Physics Sim Lab &emsp; <sup>\*</sup>Equal contribution, <sup>†</sup>Equal advising
+>
+> We present **Video-Point Model (VPM)**, a multi-view video world model built on [NVIDIA Cosmos3](https://huggingface.co/nvidia/Cosmos3-Nano).
+> - 🎥 **Multi-view Video**: Generating synchronized videos from multi-cameras.
+> - 📍 **3D Point Tracks**: Consistent 3D points across views, read from its own attention features.
+> - 🦾 **Robot action**: Predicting a robot action chunk together with the future frames.
 
 ## 🔧 Installation
 
