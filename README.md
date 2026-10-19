@@ -83,18 +83,17 @@ Every clip comes with
 All annotations come from the simulator, so they are exact and aligned across views and time. This makes VPM-Data
 useful well beyond world modeling:
 
-| research task | annotations used |
+| Task | Annotations |
 |:--|:--|
-| Multi-view and camera-controlled video generation | videos, cameras, captions |
-| 3D/4D reconstruction and novel view synthesis | videos, cameras, depth |
-| Depth estimation (monocular, multi-view, video) | videos, depth |
-| Camera pose estimation | videos, cameras |
-| 2D/3D and multi-view point tracking, scene flow | 3D trajectories, visibility |
-| Human motion estimation and forecasting | 3D trajectories on people, cameras |
-| Object and vehicle motion estimation | 3D trajectories on objects and vehicles, cameras |
-| Robot manipulation and hand–object interaction | robot and object trajectories, captions |
-| Occlusion reasoning and object permanence | visibility, depth |
-| Video understanding (captioning, grounding, video QA) | videos, captions, metadata |
+| Video generation (multi-view, camera control) | video, camera, caption |
+| 3D/4D reconstruction, novel view synthesis | video, camera, depth |
+| Depth estimation | video, depth |
+| Camera pose estimation | video, camera |
+| Point tracking, scene flow | tracks |
+| Human and object motion forecasting | tracks, camera |
+| Robot manipulation | tracks, caption |
+| Occlusion reasoning | tracks, depth |
+| Video understanding | video, caption, metadata |
 
 The files and their formats are described on the [<img src="docs/hf-logo.svg" alt="" height="14"> dataset card](https://huggingface.co/datasets/rooty2020/VPM-Data).
 
