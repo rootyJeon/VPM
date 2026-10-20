@@ -19,12 +19,12 @@ relative to the repository root). Every slot uses the same on-disk layout. The l
 
 | slot | stages | views per sample | resolution bucket | camera over generated frames | min. window | default ratio |
 |---|---|---|---|---|---|---|
-| `psl4d` | 1, 2 | up to 4 | `480sq` | full trajectory | 33 frames | 3 |
+| `vpm_data` | 1, 2 | up to 4 | `480sq` | full trajectory | 33 frames | 3 |
 | `droid` | 1, 2, 3 | up to 2 | `480` | held at the last clean frame | 33 frames | 3 (stage 3: the only slot) |
 | `hrdexdb` | 1, 2 | 1 (a random view of the scene each sample) | `480` | held at the last clean frame | 33 frames | 1 |
 | `molmo` | 1, 2 | 1 | `480sq` | full trajectory | 21 frames | 1 |
 
-The slots hold, respectively: synthetic multi-view clips with four moving cameras (`psl4d`); DROID robot
+The slots hold, respectively: VPM-Data, synthetic multi-view clips with moving cameras (`vpm_data`); DROID robot
 episodes seen by the two exterior cameras (`droid`); multi-view hand-object manipulation recordings (`hrdexdb`);
 and single-view clips with 3D point tracks from MolmoMotion-1M (`molmo`). The dataset card of
 `vpm-project/VPM-Data` lists the sources and their licenses.
@@ -42,7 +42,7 @@ and single-view clips with 3D point tracks from MolmoMotion-1M (`molmo`). The da
 - **Min. window.** `t2w_windows` shorter than this are dropped when the index is loaded.
 - **Default ratio.** `RATIOS` splits the GPUs between slots: every GPU loads exactly one slot, and a slot gets a
   share of the GPUs proportional to its ratio (at least one). A slot set to `0` is not loaded at all, and its
-  data need not exist. Override it with, for example, `RATIOS="droid=1 psl4d=1"`.
+  data need not exist. Override it with, for example, `RATIOS="droid=1 vpm_data=1"`.
 
 **Clip and past/future split.** In stages 1 and 2 a sample is one whole window
 (`start_frame..end_frame`, step `temporal_interval`), truncated to `4k+1` frames. The clean (conditioning)
@@ -169,7 +169,7 @@ Every view that can be sampled needs both files, even if it has no points of its
 
 ## DROID robot actions (`actions/<scene>.npz`)
 
-Used by stage 3 (and by `inference/inference_droid_old.py` for episode inputs):
+Used by stage 3 (and by `inference/inference_stage3.py` for episode inputs):
 
 | key | shape / dtype | meaning |
 |---|---|---|
@@ -177,7 +177,7 @@ Used by stage 3 (and by `inference/inference_droid_old.py` for episode inputs):
 | `joint_actions` | `[n, 8]` float32 | the joint-position action commanded at frame `t`: 7 joint targets (rad), then the gripper target |
 
 - The gripper is in `[0, 1]`, with **0 = open and 1 = closed** (the DROID convention). By default
-  (`gripper_flip=True`) the model sees `1 - g`. `inference/inference_droid_old.py` converts its outputs back to the
+  (`gripper_flip=True`) the model sees `1 - g`. `inference/inference_stage3.py` converts its outputs back to the
   DROID convention.
 - Row `t` is video frame `t` (DROID videos run at 15 fps). Other keys in the file are ignored.
 - **Sample construction (stage 3).** The number of clean past latents `p` is drawn from

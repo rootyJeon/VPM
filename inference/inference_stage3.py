@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: OpenMDW-1.1
-"""DROID inference with VPM-DROID-old (two calibrated exterior cameras), or a checkpoint of this repository's
-stage-3 recipe (same layout). VPM-DROID (three cameras) uses ``inference/inference_droid.py``.
+"""DROID inference with a checkpoint of this repository's stage-3 recipe (``training/train_stage3.sh``; two calibrated
+exterior cameras). The released VPM-DROID (three cameras) uses ``inference/inference_droid.py``.
 
 From the last clean frame of the DROID exterior cameras, their calibration, the robot joint state and a task
 instruction, VPM jointly generates the next 32 frames of every view and a 32-step joint-position action chunk.
@@ -23,7 +23,7 @@ Outputs in ``<out-dir>/<name>/``:
     [V, T, N] (metres along the camera z axis), ``xyz_cam`` and ``xyz_world`` [V, T, N, 3] (metres).
   * ``meta.json``: inputs, sampling settings, timing and peak GPU memory.
 
-Launch with ``torchrun --nproc_per_node=N`` (see ``inference/infer_droid_old.sh``): the model is sharded over the N GPUs and
+Launch with ``torchrun --nproc_per_node=N`` (see ``inference/infer_stage3.sh``): the model is sharded over the N GPUs and
 the requested episodes run one per rank in lockstep.
 """
 
@@ -55,7 +55,6 @@ from cosmos_framework.data.vfm.local_datasets.helper import get_aspect_ratio
 from cosmos_framework.data.vfm.sequence_packing import SequencePlan
 from cosmos_framework.utils import log, misc
 
-DEFAULT_CKPT = "rooty2020/VPM-DROID-old"
 DEFAULT_TOML = "examples/toml/vpm_stage3.toml"
 WAN_VAE_REPO = "Wan-AI/Wan2.2-TI2V-5B"
 WAN_VAE_FILE = "Wan2.2_VAE.pth"
@@ -67,9 +66,10 @@ DROID_FPS = 15.0
 
 def parse_args(argv=None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--ckpt", default=os.environ.get("VPM_CHECKPOINT", DEFAULT_CKPT),
-                    help="Hugging Face repo id or local dir: a release dir ([model/]*.safetensors) or a training "
-                         "iter_* dir (model/ DCP). Default: $VPM_CHECKPOINT")
+    ap.add_argument("--ckpt", default=os.environ.get("VPM_CHECKPOINT") or None,
+                    help="required: a training iter_* dir of the stage-3 recipe (model/ DCP), its export from "
+                         "scripts/export_checkpoint.py ([model/]*.safetensors) or a Hugging Face repo id of such an "
+                         "export. Default: $VPM_CHECKPOINT")
     ap.add_argument("--revision", default=None, help="Hugging Face revision of --ckpt")
     ap.add_argument("--toml", default=DEFAULT_TOML, help="stage-3 experiment TOML the model config is built from")
     ap.add_argument("--vae-path", default=os.environ.get("WAN_VAE_PATH", ""),
@@ -111,7 +111,7 @@ def parse_args(argv=None) -> argparse.Namespace:
                          "the dataset's cross-view track points at the first frame")
     ap.add_argument("--grid-size", type=int, default=12)
     ap.add_argument("--track-sigma", type=float, default=0.15, help="noise level of the tracking forward pass")
-    ap.add_argument("--out-dir", default=os.path.join(os.environ.get("OUTPUT_ROOT", "outputs"), "droid_old_inference"))
+    ap.add_argument("--out-dir", default=os.path.join(os.environ.get("OUTPUT_ROOT", "outputs"), "stage3_inference"))
     ap.add_argument("--dry-run", action="store_true",
                     help="build the input batches and print their contents; no GPU, no checkpoint")
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -672,7 +672,9 @@ def main(argv=None) -> None:
     if not Path(args.toml).is_absolute() and not Path(args.toml).exists():
         args.toml = str(REPO_ROOT / args.toml)
     args.toml = _abs(args.toml)
-    if Path(args.ckpt).expanduser().exists():
+    if not args.ckpt and not args.dry_run:
+        raise SystemExit("--ckpt (or $VPM_CHECKPOINT) is required: a stage-3 training iter_* dir or its export")
+    if args.ckpt and Path(args.ckpt).expanduser().exists():
         args.ckpt = _abs(args.ckpt)
     os.chdir(REPO_ROOT)
 

@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://rootyjeon.github.io/video-point-model/"><img src="https://img.shields.io/badge/Project-Page-1f6feb.svg?logo=googlechrome&logoColor=white" alt="Project page"></a>
+  <a href=""><img src="https://img.shields.io/badge/VPM-Paper-red?logo=arxiv&logoColor=red" alt="VPM Paper on arXiv"/></a>
   <a href="https://huggingface.co/datasets/rooty2020/VPM-Data"><img src="https://img.shields.io/badge/VPM--Data-Dataset-yellow?style=flat&logo=huggingface" alt="VPM-Data"></a>
   <a href="https://huggingface.co/datasets/rooty2020/VP-WorldBench"><img src="https://img.shields.io/badge/VP--WorldBench-Benchmark-yellow?style=flat&logo=huggingface" alt="VP-WorldBench"></a>
 </p>
@@ -20,10 +21,16 @@
 > - 📍 **3D Point Tracks**: Consistent 3D points across views, read from its own attention features.
 > - 🦾 **Robot action**: Predicting a robot action chunk together with the future frames.
 
+## TODO
+- [X] Release VPM-Data and VP-WorldBench
+- [X] Release inference and training code
+- [ ] Release VPM-Data with 1M samples (expected: Dec. 21)
+- [ ] Release VPM trained on the Cosmos3-Super backbone
+
 ## 🔧 Installation
 
 ```bash
-git clone https://github.com/vpm-project/VPM.git && cd VPM
+git clone https://github.com/rootyJeon/VPM.git && cd VPM
 sudo apt-get install -y ffmpeg
 uv sync --extra train --group cu130-train      # CUDA 12.8: --group cu128-train
 source .venv/bin/activate
@@ -31,7 +38,7 @@ source .venv/bin/activate
 
 ## 📊 VP-WorldBench
 
-VP-WorldBench is a 4D world modeling benchmark for video world models: 1,200 synchronized multi-view clips with cameras,
+VP-WorldBench is a **4D world modeling benchmark** for video world models: 1,200 synchronized multi-view clips with cameras,
 3D point tracks and captions, in four subsets (simulated / real × robot / general). Its main task is multi-view
 video generation, scored on appearance, cross-view consistency and 3D motion accuracy. VP-WorldBench can be used to evaluate diverse tasks such as 3D/4D reconstruction, human motion, and video understanding.
 
@@ -47,7 +54,8 @@ Details for download, results, and the evaluation on other tasks are in [vp-worl
 
 VPM-Data is the training set of VPM: **10K simulated clips** that pair synchronized multi-view videos with persistent
 3D point trajectories. It has 8,000 tabletop manipulation clips, in which a Fourier GR-1 T2 humanoid picks and places
-objects among clutter, and 2,000 urban clips of pedestrians and vehicles filmed by moving cameras.
+objects among clutter, and 2,000 urban clips of pedestrians and vehicles filmed by moving cameras. 
+We will release an extended version of VPM-Data with 1M samples, including real-world clips.
 
 Every clip comes with
 
@@ -60,20 +68,10 @@ Every clip comes with
   camera motion types, and scene and task attributes.
 
 All annotations come from the simulator, so they are exact and aligned across views and time. This makes VPM-Data
-useful well beyond world modeling:
+useful well beyond world modeling, for tasks such as video generation, 3D/4D reconstruction, novel view synthesis,
+depth estimation, 2D/3D point tracking, and video understanding.
 
-| Task | Annotations |
-|:--|:--|
-| Video generation (multi-view, camera control) | video, camera, caption |
-| 3D/4D reconstruction, novel view synthesis | video, camera, depth |
-| Depth estimation | video, depth |
-| Camera pose estimation | video, camera |
-| Point tracking, scene flow | tracks |
-| Human and object motion forecasting | tracks, camera |
-| Robot manipulation | tracks, caption |
-| Video understanding | video, caption, metadata |
-
-The files and their formats are described on the [<img src="docs/hf-logo.svg" alt="" height="14"> dataset card](https://huggingface.co/datasets/rooty2020/VPM-Data).
+The files and their formats are described on the [🤗 dataset card](https://huggingface.co/datasets/rooty2020/VPM-Data).
 
 ## 🦾 Robot Data with 3D Point Trajectories
 
@@ -81,14 +79,13 @@ We also release the robot manipulation data with 3D point trajectories that we b
 persistent, metric 3D points on the robot arm and gripper (and the manipulated objects in simulation), computed from
 the robot CAD model and the recorded robot or simulator states instead of a visual point tracker, together with
 calibrated multi-view videos and language. DROID-VP keeps whole DROID episodes with the calibration and per-frame
-poses of all three cameras (the data VPM-DROID is trained on), and RoboCasa episodes are cut into language-annotated
-subtask clips. The curation is described on each dataset card and in Appendix B.2 of the paper.
+poses of all three cameras, and RoboCasa episodes are cut into language-annotated subtask clips.
 
-| dataset | source | samples | views | 3D points per frame | size | download |
+| Dataset | Source | Samples | Views | 3D points per frame | Size | Download |
 |:--|:--|:--|:--|:--|:--|:--|
-| DROID-VP | [DROID](https://droid-dataset.github.io/) (real) | 50,430 episodes, 17,982 with point tracks | 3 × 320×180, 15 fps | 512 arm + 256 gripper | 1.03 TB | [<img src="docs/hf-logo.svg" alt="" height="14"> DROID-VP](https://huggingface.co/datasets/rooty2020/DROID-VP) |
-| LIBERO-VP | [LIBERO](https://libero-project.github.io/) (sim) | 6,500 episodes, 130 tasks | 3 × 256×256, 20 fps | 512 arm + 256 gripper + 256 object | 13.8 GB | [<img src="docs/hf-logo.svg" alt="" height="14"> LIBERO-VP](https://huggingface.co/datasets/rooty2020/LIBERO-VP) |
-| RoboCasa-VP | [RoboCasa365](https://robocasa.ai/) (sim) | 217,594 subtask clips from 24,504 episodes, 235 tasks | 3 × 256×256, 20 fps | 512 arm + 256 gripper + 256 per object | 487 GB | [<img src="docs/hf-logo.svg" alt="" height="14"> RoboCasa-VP](https://huggingface.co/datasets/rooty2020/RoboCasa-VP) |
+| DROID-VP | [DROID](https://droid-dataset.github.io/) | 50,430 episodes, 17,982 with point tracks | 3 × 320×180, 15 fps | 512 arm + 256 gripper | 1.03 TB | [🤗 DROID-VP](https://huggingface.co/datasets/rooty2020/DROID-VP) |
+| LIBERO-VP | [LIBERO](https://libero-project.github.io/) | 6,500 episodes, 130 tasks | 3 × 256×256, 20 fps | 512 arm + 256 gripper + 256 object | 13.8 GB | [🤗 LIBERO-VP](https://huggingface.co/datasets/rooty2020/LIBERO-VP) |
+| RoboCasa-VP | [RoboCasa365](https://robocasa.ai/) | 217,594 subtask clips from 24,504 episodes, 235 tasks | 3 × 256×256, 20 fps | 512 arm + 256 gripper + 256 per object | 487 GB | [🤗 RoboCasa-VP](https://huggingface.co/datasets/rooty2020/RoboCasa-VP) |
 
 ```bash
 hf download rooty2020/DROID-VP    --repo-type dataset --local-dir data/DROID-VP
@@ -99,9 +96,7 @@ hf download rooty2020/RoboCasa-VP --repo-type dataset --local-dir data/RoboCasa-
 LIBERO-VP and RoboCasa-VP ship as tar shards of self-contained samples (videos, `robot.npz` / `gripper.npz` /
 `object*.npz` point tracks and a `meta.json` with cameras and language). DROID-VP keeps the layout of the VPM-DROID
 training run (JPEG frame caches, joint / pose / camera tables and point caches) and comes with a reader,
-`tools/read_episode.py`. To train on them, convert them to the slot layout in
-[training/DATA.md](training/DATA.md#preparing-your-own-data). They follow the licenses of their source datasets
-(CC BY 4.0).
+`tools/read_episode.py`. To train on them, convert them to the slot layout in [training/DATA.md](training/DATA.md#preparing-your-own-data).
 
 ## 📦 Checkpoints
 
@@ -113,10 +108,9 @@ bash scripts/download_assets.sh --release   # + the VPM-DROID checkpoint
 Cosmos3-Nano is converted to a DCP checkpoint for training, as in
 [Cosmos-Framework](https://github.com/NVIDIA/cosmos-framework/blob/main/docs/training.md#step-2--prepare-checkpoint).
 
-| model | setup | download |
+| Model | Setup | Download |
 |:--|:--|:--|
-| VPM-DROID | Video + Action + Point tracks, three DROID cameras incl. wrist | [<img src="docs/hf-logo.svg" alt="" height="14"> VPM-DROID](https://huggingface.co/rooty2020/VPM-DROID) |
-| VPM-DROID-v2 | Video + Action, three DROID cameras incl. wrist, trained on [DROID-VP](https://huggingface.co/datasets/rooty2020/DROID-VP) | [<img src="docs/hf-logo.svg" alt="" height="14"> VPM-DROID-v2](https://huggingface.co/rooty2020/VPM-DROID-v2) |
+| VPM-DROID | Video + Action + Point tracks | [🤗 VPM-DROID](https://huggingface.co/rooty2020/VPM-DROID) |
 
 ## 🚀 Inference
 
@@ -138,7 +132,7 @@ Input formats, options and multi-GPU use are in [inference/README.md](inference/
 
 VPM is trained from Cosmos3-Nano in three stages:
 
-| stage | starts from | trains |
+| Stage | Initialization | Trains |
 |:--|:--|:--|
 | **1**  | Cosmos3-Nano | video generator, camera conditioning |
 | **2**  | stage 1 | tracking head |

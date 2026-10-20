@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: OpenMDW-1.1
 #
-# DROID inference with VPM-DROID (torchrun wrapper of inference/inference_droid.py). Also runs VPM-DROID-v2 / v3
-# (--ckpt rooty2020/VPM-DROID-v2); VPM-DROID-old uses inference/infer_droid_old.sh.
+# DROID inference with VPM-DROID (torchrun wrapper of inference/inference_droid.py). Checkpoints of this
+# repository's stage-3 recipe use inference/infer_stage3.sh.
 #
 #   # an episode of DROID-VP (current frame 40; default: the start of its first non-idle range)
 #   bash inference/infer_droid.sh --episode 42 --frame 40

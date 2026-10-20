@@ -43,12 +43,12 @@ VIDEO_STREAM = [
 ACTION_STREAM = ["action2llm", "llm2action", "action_modality_embed"]
 
 SLOTS = {
-    "psl4d": dict(num_views=4, resolution="480sq", future_camera="full", random_anchor=False, min_window_frames=33),
+    "vpm_data": dict(num_views=4, resolution="480sq", future_camera="full", random_anchor=False, min_window_frames=33),
     "droid": dict(num_views=2, resolution="480", future_camera="hold", random_anchor=False, min_window_frames=33),
     "hrdexdb": dict(num_views=1, resolution="480", future_camera="hold", random_anchor=True, min_window_frames=33),
     "molmo": dict(num_views=1, resolution="480sq", future_camera="full", random_anchor=False, min_window_frames=21),
 }
-RATIOS = {"psl4d": 3, "droid": 3, "hrdexdb": 1, "molmo": 1}
+RATIOS = {"vpm_data": 3, "droid": 3, "hrdexdb": 1, "molmo": 1}
 
 
 def _jsonl(slot: str) -> list:

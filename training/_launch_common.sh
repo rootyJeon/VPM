@@ -17,7 +17,7 @@
 #   OUTPUT_ROOT            run directory root (default: outputs); exported as IMAGINAIRE_OUTPUT_ROOT
 #   NNODES NODE_RANK NPROC_PER_NODE MASTER_ADDR MASTER_PORT   torchrun topology
 #   MAX_TOKENS MAX_SAMPLES_PER_PACK LR MAX_ITER SAVE_ITER WARMUP_STEPS CYCLE_LEN   training knobs
-#   RATIOS                 per-slot GPU ratios, e.g. "psl4d=3 droid=3 hrdexdb=1 molmo=1"; a slot that is
+#   RATIOS                 per-slot GPU ratios, e.g. "vpm_data=3 droid=3 hrdexdb=1 molmo=1"; a slot that is
 #                          omitted or set to 0 is not trained on
 #   JSONL_<SLOT>           optional comma-separated jsonl list replacing <slot>/train/video_dataset_file.jsonl
 #   WANDB_MODE             online | offline | disabled (default: disabled)

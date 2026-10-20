@@ -9,7 +9,7 @@ one under the same `OUTPUT_ROOT`.
 | starts from | Cosmos3-Nano | stage 1 | stage 2 |
 | trains | generation tower, camera conditioning | tracking head | generation tower, action stream, tracking head (full fine-tuning) |
 | losses | video flow matching | 3D point tracks | video FM · action FM (×10) · tracks (×0.1) |
-| data (GPU ratio) | psl4d 3 · droid 3 · hrdexdb 1 · molmo 1 | same | droid with actions |
+| data (GPU ratio) | vpm_data 3 · droid 3 · hrdexdb 1 · molmo 1 | same | droid with actions |
 | lr · iters | 1e-4 · 2k | 2e-5 (head ×5) · 2k | 2e-5 (action ×5) · 5k |
 
 The language tower stays frozen throughout. The tracking head starts from random weights and is first trained in
@@ -42,7 +42,7 @@ Main environment variables (the full list is in the header of [`_launch_common.s
 |:--|:--|:--|
 | `VPM_DATA_ROOT` · `OUTPUT_ROOT` | `data` · `outputs` | data and run roots |
 | `BASE_CHECKPOINT_PATH` | previous stage | warm start (a DCP `model/` dir), stage 1: `checkpoints/Cosmos3-Nano` |
-| `RATIOS` | see table | GPU share per slot, e.g. `"psl4d=3 droid=3 hrdexdb=0 molmo=1"` (0 = unused) |
+| `RATIOS` | see table | GPU share per slot, e.g. `"vpm_data=3 droid=3 hrdexdb=0 molmo=1"` (0 = unused) |
 | `MAX_TOKENS` · `MAX_SAMPLES_PER_PACK` | 50k (stage 2: 55k) · 6 | packed tokens / samples per GPU; lower for < 96 GB GPUs |
 | `LR` · `MAX_ITER` · `SAVE_ITER` | see table | schedule |
 | `NNODES` · `NODE_RANK` · `MASTER_ADDR` · `NPROC_PER_NODE` | single node | multi-node `torchrun` |
@@ -61,7 +61,7 @@ STAGE=2 sbatch --dependency=afterany:<job id> training/train.sbatch.example
 ## Export
 
 `scripts/export_checkpoint.py` turns a training checkpoint into sharded bf16 safetensors that
-`inference/infer_droid_old.sh --ckpt` loads:
+`inference/infer_stage3.sh --ckpt` loads:
 
 ```bash
 python scripts/export_checkpoint.py \

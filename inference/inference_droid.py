@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: OpenMDW-1.1
 """DROID inference with VPM-DROID (three cameras, joint-position actions, no camera calibration).
 
-Also runs VPM-DROID-v2 and VPM-DROID-v3 (same architecture; pass ``--ckpt``). VPM-DROID-old (two exterior cameras
-with calibration) uses ``inference/inference_droid_old.py``.
+Checkpoints of this repository's stage-3 recipe (two calibrated exterior cameras) use ``inference/inference_stage3.py``.
 
 From the clean past frames of the three DROID cameras (``exterior_1_left``, ``exterior_2_left``, ``wrist_left``),
 the robot joint state, the joint actions that led to the current frame and a task instruction, VPM-DROID jointly
@@ -59,7 +58,7 @@ for _p in (str(REPO_ROOT), str(INFERENCE_DIR)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from inference_droid_old import (  # noqa: E402
+from inference_stage3 import (  # noqa: E402
     WAN_VAE_REPO,
     _abs,
     _first,
@@ -99,9 +98,9 @@ STATE_DIM = 8
 MAX_ACTION_DIM = 64
 MAX_TEXT_TOKENS = 1024
 DROID_FPS = 15.0
-# Gripper channel inside the model: True = ``1 - g`` (VPM-DROID-v2/v3, NVIDIA's Cosmos3-Nano DROID policy convention),
-# False = DROID's own 0 open .. 1 closed (VPM-DROID). Set in main() from --gripper / the checkpoint's release.json.
-GRIPPER_FLIP = True
+# Gripper channel inside the model: False = DROID's own 0 open .. 1 closed (VPM-DROID), True = ``1 - g`` (NVIDIA's
+# Cosmos3-Nano DROID policy convention). Set in main() from --gripper / the checkpoint's release.json.
+GRIPPER_FLIP = False
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -112,8 +111,8 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--revision", default=None, help="Hugging Face revision of --ckpt")
     ap.add_argument("--gripper", choices=("auto", "droid", "flipped"), default="auto",
                     help="gripper convention inside the checkpoint: droid = 0 open .. 1 closed (VPM-DROID), "
-                         "flipped = 1 - g (VPM-DROID-v2/v3). auto = the 'gripper' field of the checkpoint's "
-                         "release.json, else flipped. Inputs and outputs of this script always use DROID's convention.")
+                         "flipped = 1 - g. auto = the 'gripper' field of the checkpoint's release.json, else droid. "
+                         "Inputs and outputs of this script always use DROID's convention.")
     ap.add_argument("--toml", default=DEFAULT_TOML, help="stage-3 experiment TOML the model config is built from")
     ap.add_argument("--vae-path", default=os.environ.get("WAN_VAE_PATH", ""),
                     help=f"Wan2.2 VAE weights (default: $WAN_VAE_PATH, else downloaded from {WAN_VAE_REPO})")
@@ -485,18 +484,18 @@ def gripper_flip_for(choice: str, ckpt_dir: "Path | None") -> bool:
         return choice == "flipped"
     rel = None if ckpt_dir is None else ckpt_dir / "release.json"
     if rel is not None and rel.is_file():
-        return json.loads(rel.read_text()).get("gripper", "flipped") != "droid"
-    return True
+        return json.loads(rel.read_text()).get("gripper", "droid") != "droid"
+    return False
 
 
 def check_checkpoint(ckpt_dir: Path) -> None:
-    """Refuse a VPM-DROID-old release: it carries the camera-conditioning weights and needs infer_droid_old.sh."""
+    """Refuse a stage-3 recipe checkpoint: it carries the camera-conditioning weights and needs infer_stage3.sh."""
     for idx in (ckpt_dir / "model" / "model.safetensors.index.json", ckpt_dir / "model.safetensors.index.json"):
         if idx.is_file():
             keys = json.loads(idx.read_text())["weight_map"]
             if any(k.startswith("net.camera_conditioner.") for k in keys):
-                raise SystemExit(f"{ckpt_dir} is a camera-conditioned VPM checkpoint (VPM-DROID-old layout); "
-                                 "run it with inference/infer_droid_old.sh")
+                raise SystemExit(f"{ckpt_dir} is a camera-conditioned checkpoint of the stage-3 recipe; "
+                                 "run it with inference/infer_stage3.sh")
             return
 
 
