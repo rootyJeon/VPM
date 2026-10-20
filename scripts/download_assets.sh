@@ -34,7 +34,7 @@ WAN_VAE_REPO="Wan-AI/Wan2.2-TI2V-5B"
 WAN_VAE_FILE="Wan2.2_VAE.pth"
 WAN_VAE_REVISION="921dbaf3f1674a56f47e83fb80a34bac8a8f203e"
 TOKENIZER_REPO="Qwen/Qwen3-VL-8B-Instruct"
-ALL_SLOTS="psl4d,droid,hrdexdb,molmo"
+ALL_SLOTS="droid,hrdexdb,molmo"
 
 RELEASE_REPO="${VPM_RELEASE_REPO:-rooty2020/VPM-DROID}"
 DATA_REPO="${VPM_DATA_REPO:-vpm-project/VPM-Data}"
@@ -50,7 +50,7 @@ Options:
   --no-vae        skip the Wan2.2 VAE
   --no-tokenizer  skip the Qwen3-VL tokenizer prefetch
   --release       also download the released checkpoint ($VPM_RELEASE_REPO)
-  --data SLOTS    also download prepared data for SLOTS (comma separated: psl4d,droid,hrdexdb,molmo, or all)
+  --data SLOTS    also download prepared data for SLOTS (comma separated: droid,hrdexdb,molmo, or all)
   -h, --help      show this help
 EOF
 }
