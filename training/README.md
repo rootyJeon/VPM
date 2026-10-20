@@ -1,7 +1,6 @@
 # 🏋️ Training
 
-VPM is trained from Cosmos3-Nano in three stages. Each stage warm-starts from the latest checkpoint of the previous
-one under the same `OUTPUT_ROOT`.
+This section is a VPM training tutorial. VPM is trained from Cosmos3-Nano in three stages. Each stage warm-starts from the latest checkpoint of the previous one under the same `OUTPUT_ROOT`. The data config in this section is only for the tutorial.
 
 | | stage 1 · world model | stage 2 · point-track head | stage 3 · video + action + track |
 |:--|:--|:--|:--|
