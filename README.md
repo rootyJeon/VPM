@@ -25,7 +25,7 @@
 - [X] Release VPM-Data and VP-WorldBench
 - [X] Release inference and training code
 - [ ] Release VPM-Data with 1M samples (expected: Dec. 21)
-- [ ] Release VPM trained on the Cosmos3-Super backbone
+- [ ] Release VPM trained on the Cosmos3-Super backbone (expected: Dec. 21)
 
 ## 🔧 Installation
 
