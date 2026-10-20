@@ -169,6 +169,7 @@ Other third-party code is listed in [NOTICE](NOTICE). Datasets follow the licens
 
 ## 📝 Citation
 
+If you find **VPM**, its dataset, and the benchmark useful for your project, please consider giving this repo a 🌟 and cite our work using the following BibTeX:
 ```bibtex
 @misc{vpm2026,
   title  = {Learning the 4D World through Point Trajectory Forecasting},
@@ -180,3 +181,8 @@ Other third-party code is listed in [NOTICE](NOTICE). Datasets follow the licens
   url    = {https://rootyjeon.github.io/video-point-model/}
 }
 ```
+
+## 📞 Contact
+
+For questions, issues, or collaborations, please contact [Byungwoo Jeon](https://rootyjeon.github.io/).<br>
+If you are interested in receiving robot data similar to VPM, please contact [Physics Sim Lab](https://pslab.ai/en/).
