@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://rootyjeon.github.io/video-point-model/"><img src="https://img.shields.io/badge/Project-Page-1f6feb.svg?logo=googlechrome&logoColor=white" alt="Project page"></a>
-  <a href=""><img src="https://img.shields.io/badge/VPM-Paper-red?logo=arxiv&logoColor=red" alt="VPM Paper on arXiv"/></a>
+  <a href="https://arxiv.org/abs/2610.28594"><img src="https://img.shields.io/badge/VPM-Paper-red?logo=arxiv&logoColor=red" alt="VPM Paper on arXiv"/></a>
   <a href="https://huggingface.co/datasets/rooty2020/VPM-Data"><img src="https://img.shields.io/badge/VPM--Data-Dataset-yellow?style=flat&logo=huggingface" alt="VPM-Data"></a>
   <a href="https://huggingface.co/datasets/rooty2020/VP-WorldBench"><img src="https://img.shields.io/badge/VP--WorldBench-Benchmark-yellow?style=flat&logo=huggingface" alt="VP-WorldBench"></a>
 </p>
