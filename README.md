@@ -171,14 +171,11 @@ Other third-party code is listed in [NOTICE](NOTICE). Datasets follow the licens
 
 If you find **VPM**, its dataset, and the benchmark useful for your project, please consider giving this repo a 🌟 and cite our work using the following BibTeX:
 ```bibtex
-@misc{vpm2026,
-  title  = {Learning the 4D World through Point Trajectory Forecasting},
-  author = {Jeon, Byungwoo and Hong, Sunghwan and Kim, Dohyeon and Lee, Jonghoon and Park, Jungwoo and Lee, Inhee and
-            Baek, Doosan and Kim, Jinil and Lim, Taehyun and Joo, Hanbyul and Pollefeys, Marc and Xie, Saining and
-            Shin, Jinwoo},
-  year   = {2026},
-  note   = {Preprint},
-  url    = {https://rootyjeon.github.io/video-point-model/}
+@article{jeon2026vpm,
+  title={Learning the 4D World through Point Trajectory Forecasting},
+  author={Jeon, Byungwoo and Hong, Sunghwan and Kim, Dohyeon and Lee, Jonghoon and Park, Jungwoo and Lee, Inhee and Baek, Doosan and Kim, Jinil and Lim, Taehyun and Joo, Hanbyul and Pollefeys, Marc and Xie, Saining and Shin, Jinwoo},
+  journal={arXiv preprint arXiv:2610.28594},
+  year={2026}
 }
 ```
 
